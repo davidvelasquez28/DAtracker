@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DA Tracker</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #111111;
+    --muted: #888888;
+    --line: #e5e5e5;
+    --line-strong: #cccccc;
+    --accent: #2563eb;
+    --soft: #f7f7f7;
+    --danger: #b91c1c;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  h1, h2, h3, h4, .helv {
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* Top bar */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .nav button {
+    background: none;
+    border: 1px solid var(--line);
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 4px;
+    color: var(--fg);
+  }
+  .nav button:hover { background: var(--soft); }
+  .date-label {
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    min-width: 220px;
+    text-align: center;
+  }
+  .actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .actions button, .print-menu summary {
+    background: none;
+    border: 1px solid var(--line);
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 14px;
+    border-radius: 4px;
+    color: var(--fg);
+    list-style: none;
+  }
+  .actions button:hover, .print-menu summary:hover { background: var(--soft); }
+  .print-menu { position: relative; }
+  .print-menu summary::-webkit-details-marker { display: none; }
+  .print-menu[open] .print-dropdown {
+    display: block;
+  }
+  .print-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 4px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    z-index: 10;
+    min-width: 140px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .print-dropdown button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    border: none;
+    border-radius: 0;
+    padding: 8px 12px;
+  }
+
+  /* Wake up */
+  .wake {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 24px;
+    font-size: 15px;
+  }
+  .wake-label {
+    color: var(--muted);
+  }
+  .wake input {
+    border: 1px solid var(--line);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+
+  /* Section title */
+  .section-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin: 32px 0 12px;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+  }
+
+  /* Goals */
+  .goals {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .goal {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px;
+  }
+  .goal-label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .goal-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+  }
+  .goal-row input {
+    width: 60px;
+    border: none;
+    border-bottom: 1px solid var(--line-strong);
+    font-size: 18px;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    padding: 2px 4px;
+    background: transparent;
+  }
+  .goal-row input:focus { outline: none; border-bottom-color: var(--accent); }
+  .goal-unit { font-size: 13px; color: var(--muted); font-weight: 400; }
+  .goal-progress {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .bar {
+    margin-top: 4px;
+    height: 4px;
+    background: var(--soft);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.3s;
+  }
+  .bar-fill.over { background: var(--danger); }
+
+  /* Timer */
+  .timer-block {
+    margin: 32px 0 24px;
+    text-align: center;
+    padding: 24px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .timer-state {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .timer-display {
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    font-size: 56px;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+  .timer-btn {
+    background: var(--fg);
+    color: var(--bg);
+    border: none;
+    padding: 12px 36px;
+    font-size: 14px;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .timer-btn:hover { opacity: 0.85; }
+  .timer-btn.stop { background: var(--danger); }
+
+  /* Distraction counter */
+  .distraction-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 24px 0;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .distraction-info {
+    display: flex;
+    flex-direction: column;
+  }
+  .distraction-count {
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    font-size: 28px;
+    line-height: 1;
+  }
+  .distraction-label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-top: 4px;
+  }
+  .distraction-controls {
+    display: flex;
+    gap: 8px;
+  }
+  .distraction-controls button {
+    border: 1px solid var(--line);
+    background: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 4px;
+    font-size: 20px;
+    cursor: pointer;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+  }
+  .distraction-controls .plus {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+    width: 56px;
+  }
+  .distraction-controls button:hover { opacity: 0.85; }
+
+  /* Sessions list */
+  .sessions {
+    margin-top: 8px;
+  }
+  .session-item, .break-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    gap: 12px;
+  }
+  .session-item:last-child, .break-item:last-child { border-bottom: none; }
+  .session-time {
+    font-variant-numeric: tabular-nums;
+  }
+  .session-duration {
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    margin-left: auto;
+    margin-right: 8px;
+  }
+  .break-item {
+    color: var(--muted);
+    font-size: 13px;
+    padding-left: 24px;
+    background: var(--soft);
+  }
+  .session-controls {
+    display: flex;
+    gap: 4px;
+  }
+  .session-controls button {
+    background: none;
+    border: 1px solid var(--line);
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .session-controls button:hover { background: var(--bg); }
+  .empty-state {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 16px;
+    text-align: center;
+    font-style: italic;
+  }
+
+  /* End day */
+  .end-day-row {
+    margin-top: 32px;
+    text-align: center;
+  }
+  .end-day-btn {
+    background: none;
+    color: var(--fg);
+    border: 1px solid var(--line-strong);
+    padding: 10px 24px;
+    font-size: 13px;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .end-day-btn:hover { background: var(--soft); }
+  .day-ended-banner {
+    margin-top: 16px;
+    padding: 10px;
+    background: var(--soft);
+    border-radius: 4px;
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  /* Modal */
+  .modal-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-bg.show { display: flex; }
+  .modal {
+    background: var(--bg);
+    padding: 24px;
+    border-radius: 8px;
+    max-width: 400px;
+    width: 90%;
+  }
+  .modal h3 {
+    margin: 0 0 16px;
+    font-size: 16px;
+  }
+  .modal-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+  }
+  .modal-row label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .modal input {
+    border: 1px solid var(--line);
+    padding: 8px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .modal-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 16px;
+  }
+  .modal-buttons button {
+    border: 1px solid var(--line);
+    background: var(--bg);
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .modal-buttons .primary {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
+  .modal-buttons .danger {
+    color: var(--danger);
+  }
+
+  /* History view */
+  .view { display: none; }
+  .view.active { display: block; }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 14px;
+  }
+  .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+  }
+  .stat-value {
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    font-size: 22px;
+  }
+  .stat-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .day-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: center;
+    font-size: 13px;
+  }
+  .day-row:last-child { border-bottom: none; }
+  .day-row.header {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+  }
+  .day-row .day-link {
+    cursor: pointer;
+    color: var(--fg);
+    text-decoration: none;
+  }
+  .day-row .day-link:hover { text-decoration: underline; }
+
+  /* Export / import */
+  .data-controls {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .data-controls button {
+    background: none;
+    border: 1px solid var(--line);
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .data-controls button:hover { background: var(--soft); }
+
+  /* Print */
+  @media print {
+    .no-print { display: none !important; }
+    body { font-size: 12px; }
+    .container { padding: 0; max-width: 100%; }
+    .timer-block, .distraction-row { border: 1px solid #ccc; }
+    .print-only { display: block !important; }
+    @page { margin: 0.5in; size: letter; }
+  }
+  .print-only { display: none; }
+
+  @media (max-width: 600px) {
+    .goals { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: 1fr; }
+    .day-row { grid-template-columns: 100px 1fr 1fr; font-size: 12px; }
+    .day-row .hide-mobile { display: none; }
+    .timer-display { font-size: 44px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- TODAY VIEW -->
+  <div id="day-view" class="view active">
+    <div class="topbar no-print">
+      <div class="nav">
+        <button id="prev-day" title="Previous day">←</button>
+        <div class="date-label" id="date-label">—</div>
+        <button id="next-day" title="Next day">→</button>
+      </div>
+      <div class="actions">
+        <button id="today-btn">Today</button>
+        <button id="history-btn">History</button>
+        <details class="print-menu">
+          <summary>Print ▾</summary>
+          <div class="print-dropdown">
+            <button data-print="day">Print Day</button>
+            <button data-print="week">Print Week</button>
+            <button data-print="month">Print Month</button>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div class="print-only" id="print-header"></div>
+
+    <div class="wake">
+      <span class="wake-label">Wake up:</span>
+      <input type="time" id="wake-input">
+    </div>
+
+    <div class="section-title">Goals</div>
+    <div class="goals">
+      <div class="goal">
+        <div class="goal-label">DA Time</div>
+        <div class="goal-row">
+          <input type="number" id="goal-da" min="0" step="0.25"> <span class="goal-unit">hrs</span>
+        </div>
+        <div class="goal-progress" id="da-progress">—</div>
+        <div class="bar"><div class="bar-fill" id="da-bar" style="width:0%"></div></div>
+      </div>
+      <div class="goal">
+        <div class="goal-label">Total Breaks</div>
+        <div class="goal-row">
+          <input type="number" id="goal-break-total" min="0" step="0.25"> <span class="goal-unit">hrs</span>
+        </div>
+        <div class="goal-progress" id="break-total-progress">—</div>
+        <div class="bar"><div class="bar-fill" id="break-total-bar" style="width:0%"></div></div>
+      </div>
+      <div class="goal">
+        <div class="goal-label">Per Break</div>
+        <div class="goal-row">
+          <input type="number" id="goal-break-per" min="0" step="1"> <span class="goal-unit">min</span>
+        </div>
+        <div class="goal-progress" id="break-per-progress">—</div>
+      </div>
+    </div>
+
+    <div class="timer-block no-print">
+      <div class="timer-state" id="timer-state">Ready</div>
+      <div class="timer-display" id="timer-display">00:00:00</div>
+      <button class="timer-btn" id="timer-btn">Start Session</button>
+    </div>
+
+    <div class="distraction-row">
+      <div class="distraction-info">
+        <div class="distraction-count" id="distraction-count">0</div>
+        <div class="distraction-label">Distractions</div>
+      </div>
+      <div class="distraction-controls no-print">
+        <button id="dist-minus">−</button>
+        <button class="plus" id="dist-plus">+1</button>
+      </div>
+    </div>
+
+    <div class="section-title">Sessions</div>
+    <div class="sessions" id="sessions-list"></div>
+
+    <div class="end-day-row no-print">
+      <button class="end-day-btn" id="end-day-btn">End Day</button>
+      <div class="day-ended-banner" id="day-ended-banner" style="display:none;">
+        Day ended. Breaks won't accrue further.
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTORY VIEW -->
+  <div id="history-view" class="view">
+    <div class="topbar no-print">
+      <div class="nav">
+        <div class="date-label">All Time Stats</div>
+      </div>
+      <div class="actions">
+        <button id="back-day-btn">← Back to Day</button>
+      </div>
+    </div>
+
+    <div class="stat-grid" id="stat-grid"></div>
+
+    <div class="section-title">Days</div>
+    <div id="days-list"></div>
+
+    <div class="data-controls no-print">
+      <button id="export-btn">Export JSON</button>
+      <button id="import-btn">Import JSON</button>
+      <input type="file" id="import-file" accept="application/json" style="display:none;">
+      <button id="clear-btn">Clear All Data</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit session modal -->
+<div class="modal-bg" id="edit-modal">
+  <div class="modal">
+    <h3 id="edit-modal-title">Edit Session</h3>
+    <div class="modal-row">
+      <label>Start time</label>
+      <input type="time" id="edit-start" step="1">
+    </div>
+    <div class="modal-row">
+      <label>End time</label>
+      <input type="time" id="edit-end" step="1">
+    </div>
+    <div class="modal-buttons">
+      <button class="danger" id="edit-delete">Delete</button>
+      <button id="edit-cancel">Cancel</button>
+      <button class="primary" id="edit-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Wake-up prompt modal -->
+<div class="modal-bg" id="wake-modal">
+  <div class="modal">
+    <h3>Good morning. What time did you wake up?</h3>
+    <div class="modal-row">
+      <input type="time" id="wake-modal-input">
+    </div>
+    <div class="modal-buttons">
+      <button class="primary" id="wake-modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Data Layer =====
+const STORAGE_KEY = 'da-tracker-v1';
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { days: {} };
+    return JSON.parse(raw);
+  } catch (e) {
+    return { days: {} };
+  }
+}
+
+function saveData(data) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let data = loadData();
+let viewingDate = todayKey();
+let currentView = 'day';
+let activeTimerInterval = null;
+let editingSession = null;
+
+// ===== Date helpers =====
+function todayKey() {
+  const d = new Date();
+  return dateKey(d);
+}
+
+function dateKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function parseKey(key) {
+  const [y, m, d] = key.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function shiftKey(key, days) {
+  const d = parseKey(key);
+  d.setDate(d.getDate() + days);
+  return dateKey(d);
+}
+
+function formatDate(key) {
+  const d = parseKey(key);
+  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function formatShortDate(key) {
+  const d = parseKey(key);
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+// ===== Day helpers =====
+function getDay(key) {
+  if (!data.days[key]) {
+    // Find most recent day with goals to inherit
+    const goals = inheritGoals(key);
+    data.days[key] = {
+      wakeTime: null,
+      goals: goals,
+      sessions: [], // {id, start (ISO), end (ISO or null if active)}
+      distractions: 0,
+      ended: false
+    };
+  }
+  return data.days[key];
+}
+
+function inheritGoals(key) {
+  const keys = Object.keys(data.days).filter(k => k < key && data.days[k].goals).sort().reverse();
+  if (keys.length > 0) {
+    return { ...data.days[keys[0]].goals };
+  }
+  return { daHours: 6, breakTotalHours: 1, breakPerMin: 15 };
+}
+
+function getActiveSession(day) {
+  return day.sessions.find(s => !s.end);
+}
+
+// ===== Time formatting =====
+function formatDuration(ms) {
+  if (ms < 0) ms = 0;
+  const totalSec = Math.floor(ms / 1000);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function formatDurationShort(ms) {
+  if (ms < 0) ms = 0;
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m}m`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}m`;
+}
+
+function formatTimeOfDay(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+}
+
+function isoToTimeInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const h = String(d.getHours()).padStart(2, '0');
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const s = String(d.getSeconds()).padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
+function timeInputToIso(timeStr, dateKeyStr) {
+  const [h, m, s] = timeStr.split(':').map(Number);
+  const d = parseKey(dateKeyStr);
+  d.setHours(h, m, s || 0, 0);
+  return d.toISOString();
+}
+
+// ===== Session computations (with midnight split) =====
+// Each day stores raw sessions; for display we split sessions that cross midnight
+// For storage, we'll always commit sessions split at midnight when stopped.
+
+function splitSessionsAtMidnight(sessions, dateKeyStr) {
+  // Return sessions clipped to this date's window
+  const dayStart = parseKey(dateKeyStr).getTime();
+  const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+  return sessions.map(s => {
+    const start = new Date(s.start).getTime();
+    const end = s.end ? new Date(s.end).getTime() : Date.now();
+    const clippedStart = Math.max(start, dayStart);
+    const clippedEnd = Math.min(end, dayEnd);
+    if (clippedEnd <= clippedStart) return null;
+    return {
+      id: s.id,
+      start: new Date(clippedStart).toISOString(),
+      end: s.end ? new Date(clippedEnd).toISOString() : null,
+      _live: !s.end,
+      _crossedStart: start < dayStart,
+      _crossedEnd: end > dayEnd
+    };
+  }).filter(Boolean);
+}
+
+function computeBreaks(sessions, dayEnded) {
+  // sessions are already clipped/sorted; compute gaps between consecutive completed sessions
+  const sorted = [...sessions].sort((a, b) => new Date(a.start) - new Date(b.start));
+  const breaks = [];
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const prev = sorted[i];
+    const next = sorted[i + 1];
+    if (!prev.end) continue;
+    const gap = new Date(next.start) - new Date(prev.end);
+    if (gap > 0) {
+      breaks.push({ start: prev.end, end: next.start, duration: gap });
+    }
+  }
+  return breaks;
+}
+
+function totalDaMs(sessions) {
+  return sessions.reduce((sum, s) => {
+    const end = s.end ? new Date(s.end) : new Date();
+    return sum + (end - new Date(s.start));
+  }, 0);
+}
+
+function totalBreakMs(breaks) {
+  return breaks.reduce((sum, b) => sum + b.duration, 0);
+}
+
+// ===== Rendering =====
+function render() {
+  if (currentView === 'day') {
+    renderDay();
+  } else {
+    renderHistory();
+  }
+}
+
+function renderDay() {
+  document.getElementById('day-view').classList.add('active');
+  document.getElementById('history-view').classList.remove('active');
+
+  document.getElementById('date-label').textContent = formatDate(viewingDate);
+
+  const day = getDay(viewingDate);
+
+  // Wake input
+  const wakeInput = document.getElementById('wake-input');
+  wakeInput.value = day.wakeTime || '';
+
+  // Goals
+  document.getElementById('goal-da').value = day.goals.daHours || '';
+  document.getElementById('goal-break-total').value = day.goals.breakTotalHours || '';
+  document.getElementById('goal-break-per').value = day.goals.breakPerMin || '';
+
+  // Sessions for this date (clipped at midnight)
+  const allSessions = collectAllSessionsTouchingDate(viewingDate);
+  const clipped = splitSessionsAtMidnight(allSessions, viewingDate);
+  const breaks = computeBreaks(clipped, day.ended);
+
+  // Stats
+  const daMs = totalDaMs(clipped);
+  const breakMs = totalBreakMs(breaks);
+
+  // DA progress
+  const daGoalMs = (day.goals.daHours || 0) * 3600000;
+  document.getElementById('da-progress').textContent =
+    `${formatDurationShort(daMs)} / ${day.goals.daHours || 0}h`;
+  const daPct = daGoalMs > 0 ? Math.min(100, (daMs / daGoalMs) * 100) : 0;
+  const daBar = document.getElementById('da-bar');
+  daBar.style.width = daPct + '%';
+  daBar.classList.remove('over');
+
+  // Break total progress
+  const breakGoalMs = (day.goals.breakTotalHours || 0) * 3600000;
+  document.getElementById('break-total-progress').textContent =
+    `${formatDurationShort(breakMs)} / ${day.goals.breakTotalHours || 0}h`;
+  const breakPct = breakGoalMs > 0 ? Math.min(100, (breakMs / breakGoalMs) * 100) : 0;
+  const breakBar = document.getElementById('break-total-bar');
+  breakBar.style.width = breakPct + '%';
+  breakBar.classList.toggle('over', breakGoalMs > 0 && breakMs > breakGoalMs);
+
+  // Per break
+  const breakPerGoalMs = (day.goals.breakPerMin || 0) * 60000;
+  const overBreaks = breakPerGoalMs > 0 ? breaks.filter(b => b.duration > breakPerGoalMs).length : 0;
+  const avgBreak = breaks.length > 0 ? breakMs / breaks.length : 0;
+  document.getElementById('break-per-progress').textContent =
+    breaks.length > 0
+      ? `Avg ${formatDurationShort(avgBreak)} · ${overBreaks} over goal`
+      : 'No breaks yet';
+
+  // Distractions
+  document.getElementById('distraction-count').textContent = day.distractions || 0;
+
+  // Timer
+  renderTimer(day);
+
+  // Sessions list (interleaved with breaks)
+  renderSessionsList(clipped, breaks, day);
+
+  // End day banner
+  document.getElementById('day-ended-banner').style.display = day.ended ? 'block' : 'none';
+  document.getElementById('end-day-btn').style.display = day.ended ? 'none' : 'inline-block';
+
+  // Print header
+  document.getElementById('print-header').innerHTML = `
+    <h1 style="font-family:Helvetica,Arial,sans-serif;margin:0 0 4px;">DA Tracker</h1>
+    <div style="color:#666;margin-bottom:16px;">${formatDate(viewingDate)}</div>
+  `;
+}
+
+function collectAllSessionsTouchingDate(dateKeyStr) {
+  // Sessions stored on dateKeyStr, plus possibly previous day's sessions that crossed into this day
+  const result = [];
+  const day = data.days[dateKeyStr];
+  if (day) result.push(...day.sessions);
+  const prevKey = shiftKey(dateKeyStr, -1);
+  const prev = data.days[prevKey];
+  if (prev) {
+    for (const s of prev.sessions) {
+      const end = s.end ? new Date(s.end) : new Date();
+      const dayStart = parseKey(dateKeyStr).getTime();
+      if (end.getTime() > dayStart) {
+        result.push(s);
+      }
+    }
+  }
+  return result;
+}
+
+function renderTimer(day) {
+  const active = getActiveSession(day);
+  const stateEl = document.getElementById('timer-state');
+  const displayEl = document.getElementById('timer-display');
+  const btn = document.getElementById('timer-btn');
+
+  if (activeTimerInterval) {
+    clearInterval(activeTimerInterval);
+    activeTimerInterval = null;
+  }
+
+  if (active) {
+    stateEl.textContent = 'Working';
+    btn.textContent = 'Stop Session';
+    btn.classList.add('stop');
+    const update = () => {
+      const ms = Date.now() - new Date(active.start).getTime();
+      displayEl.textContent = formatDuration(ms);
+    };
+    update();
+    activeTimerInterval = setInterval(update, 1000);
+  } else if (day.ended) {
+    stateEl.textContent = 'Day Ended';
+    displayEl.textContent = '00:00:00';
+    btn.textContent = 'Start Session';
+    btn.classList.remove('stop');
+  } else {
+    // Check if there's a last completed session to show on-break time
+    const completed = day.sessions.filter(s => s.end).sort((a, b) => new Date(b.end) - new Date(a.end));
+    if (completed.length > 0 && viewingDate === todayKey()) {
+      const last = completed[0];
+      stateEl.textContent = 'On Break';
+      const update = () => {
+        const ms = Date.now() - new Date(last.end).getTime();
+        displayEl.textContent = formatDuration(ms);
+      };
+      update();
+      activeTimerInterval = setInterval(update, 1000);
+    } else {
+      stateEl.textContent = 'Ready';
+      displayEl.textContent = '00:00:00';
+    }
+    btn.textContent = 'Start Session';
+    btn.classList.remove('stop');
+  }
+}
+
+function renderSessionsList(sessions, breaks, day) {
+  const list = document.getElementById('sessions-list');
+  const sorted = [...sessions].sort((a, b) => new Date(a.start) - new Date(b.start));
+
+  if (sorted.length === 0) {
+    list.innerHTML = '<div class="empty-state">No sessions yet today.</div>';
+    return;
+  }
+
+  let html = '';
+  for (let i = 0; i < sorted.length; i++) {
+    const s = sorted[i];
+    const start = new Date(s.start);
+    const end = s.end ? new Date(s.end) : new Date();
+    const dur = end - start;
+    const live = !s.end;
+    const crossed = s._crossedStart || s._crossedEnd ? ' <span style="color:var(--muted);font-size:11px;">(midnight)</span>' : '';
+    const editable = !live && !s._crossedStart && !s._crossedEnd;
+    html += `
+      <div class="session-item">
+        <div>
+          <span class="session-time">${formatTimeOfDay(s.start)} – ${live ? '<em>now</em>' : formatTimeOfDay(s.end)}</span>${crossed}
+        </div>
+        <div class="session-duration">${formatDurationShort(dur)}${live ? ' •' : ''}</div>
+        <div class="session-controls no-print">
+          ${editable ? `<button data-edit="${s.id}" title="Edit">✎</button>` : ''}
+        </div>
+      </div>
+    `;
+    // Break after this session?
+    if (i < sorted.length - 1) {
+      const next = sorted[i + 1];
+      const gap = new Date(next.start) - new Date(s.end || s.start);
+      if (gap > 0 && s.end) {
+        const perGoal = (day.goals.breakPerMin || 0) * 60000;
+        const over = perGoal > 0 && gap > perGoal;
+        html += `
+          <div class="break-item">
+            <span>Break</span>
+            <span class="session-duration" style="${over ? 'color:var(--danger);' : ''}">${formatDurationShort(gap)}</span>
+            <span></span>
+          </div>
+        `;
+      }
+    }
+  }
+  list.innerHTML = html;
+
+  // Wire up edit buttons
+  list.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', () => openEditModal(btn.getAttribute('data-edit')));
+  });
+}
+
+// ===== History view =====
+function renderHistory() {
+  document.getElementById('day-view').classList.remove('active');
+  document.getElementById('history-view').classList.add('active');
+
+  const days = Object.keys(data.days).sort();
+
+  // Aggregate stats
+  const stats = computeAggregateStats();
+  const grid = document.getElementById('stat-grid');
+
+  if (days.length === 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1;">No data yet.</div>';
+    document.getElementById('days-list').innerHTML = '';
+    return;
+  }
+
+  grid.innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Avg Wake-Up</div>
+      <div class="stat-value">${stats.avgWake || '—'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg DA Start</div>
+      <div class="stat-value">${stats.avgDaStart || '—'}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg DA / Day</div>
+      <div class="stat-value">${stats.avgDa}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Total DA Time</div>
+      <div class="stat-value">${stats.totalDa}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Longest Session</div>
+      <div class="stat-value">${stats.longestSession}</div>
+      <div class="stat-sub">${stats.longestSessionDate || ''}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Session</div>
+      <div class="stat-value">${stats.avgSession}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Break</div>
+      <div class="stat-value">${stats.avgBreak}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Avg Distractions / Day</div>
+      <div class="stat-value">${stats.avgDistractions}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Most Productive Day</div>
+      <div class="stat-value">${stats.bestDayDa}</div>
+      <div class="stat-sub">${stats.bestDayDate || ''}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Days Tracked</div>
+      <div class="stat-value">${days.length}</div>
+    </div>
+  `;
+
+  // Days list
+  const sortedDesc = [...days].sort().reverse();
+  let html = `
+    <div class="day-row header">
+      <div>Date</div>
+      <div>Wake</div>
+      <div>DA Time</div>
+      <div class="hide-mobile">Sessions</div>
+      <div class="hide-mobile">Distractions</div>
+    </div>
+  `;
+  for (const k of sortedDesc) {
+    const d = data.days[k];
+    const allSessions = collectAllSessionsTouchingDate(k);
+    const clipped = splitSessionsAtMidnight(allSessions, k);
+    const daMs = totalDaMs(clipped);
+    html += `
+      <div class="day-row">
+        <a class="day-link" data-jump="${k}">${formatShortDate(k)}</a>
+        <div>${d.wakeTime || '—'}</div>
+        <div>${formatDurationShort(daMs)}</div>
+        <div class="hide-mobile">${clipped.length}</div>
+        <div class="hide-mobile">${d.distractions || 0}</div>
+      </div>
+    `;
+  }
+  document.getElementById('days-list').innerHTML = html;
+  document.querySelectorAll('[data-jump]').forEach(a => {
+    a.addEventListener('click', () => {
+      viewingDate = a.getAttribute('data-jump');
+      currentView = 'day';
+      render();
+    });
+  });
+}
+
+function computeAggregateStats() {
+  const days = Object.keys(data.days).sort();
+  if (days.length === 0) return {};
+
+  let wakeMinutes = [];
+  let daStartMinutes = [];
+  let daMsList = [];
+  let sessionDurations = [];
+  let breakDurations = [];
+  let distractions = [];
+  let longest = 0, longestDate = '';
+  let bestDayMs = 0, bestDayKey = '';
+
+  for (const k of days) {
+    const d = data.days[k];
+    if (d.wakeTime) {
+      const [h, m] = d.wakeTime.split(':').map(Number);
+      wakeMinutes.push(h * 60 + m);
+    }
+    const all = collectAllSessionsTouchingDate(k);
+    const clipped = splitSessionsAtMidnight(all, k);
+    const sorted = [...clipped].sort((a, b) => new Date(a.start) - new Date(b.start));
+
+    if (sorted.length > 0) {
+      const first = new Date(sorted[0].start);
+      daStartMinutes.push(first.getHours() * 60 + first.getMinutes());
+    }
+
+    const daMs = totalDaMs(clipped);
+    daMsList.push(daMs);
+    if (daMs > bestDayMs) { bestDayMs = daMs; bestDayKey = k; }
+
+    for (const s of sorted) {
+      const end = s.end ? new Date(s.end) : new Date();
+      const dur = end - new Date(s.start);
+      sessionDurations.push(dur);
+      if (dur > longest) { longest = dur; longestDate = k; }
+    }
+
+    const breaks = computeBreaks(sorted, d.ended);
+    for (const b of breaks) breakDurations.push(b.duration);
+
+    distractions.push(d.distractions || 0);
+  }
+
+  const avg = arr => arr.length === 0 ? 0 : arr.reduce((a,b) => a+b, 0) / arr.length;
+  const minutesToTime = mins => {
+    const h = Math.floor(mins / 60) % 24;
+    const m = Math.floor(mins % 60);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+  };
+
+  return {
+    avgWake: wakeMinutes.length ? minutesToTime(avg(wakeMinutes)) : '',
+    avgDaStart: daStartMinutes.length ? minutesToTime(avg(daStartMinutes)) : '',
+    avgDa: formatDurationShort(avg(daMsList)),
+    totalDa: formatDurationShort(daMsList.reduce((a,b)=>a+b,0)),
+    longestSession: formatDurationShort(longest),
+    longestSessionDate: longestDate ? formatShortDate(longestDate) : '',
+    avgSession: sessionDurations.length ? formatDurationShort(avg(sessionDurations)) : '—',
+    avgBreak: breakDurations.length ? formatDurationShort(avg(breakDurations)) : '—',
+    avgDistractions: distractions.length ? (avg(distractions)).toFixed(1) : '0',
+    bestDayDa: formatDurationShort(bestDayMs),
+    bestDayDate: bestDayKey ? formatShortDate(bestDayKey) : ''
+  };
+}
+
+// ===== Actions =====
+function startSession() {
+  const day = getDay(viewingDate);
+  if (day.ended) return;
+  if (getActiveSession(day)) return;
+  const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  day.sessions.push({ id, start: new Date().toISOString(), end: null });
+  saveData(data);
+  render();
+}
+
+function stopSession() {
+  // Find active session in any day (in case session crosses midnight)
+  let active = null;
+  let activeDayKey = null;
+  for (const k of Object.keys(data.days)) {
+    const a = getActiveSession(data.days[k]);
+    if (a) { active = a; activeDayKey = k; break; }
+  }
+  if (!active) return;
+
+  const startDate = new Date(active.start);
+  const now = new Date();
+  const startKey = dateKey(startDate);
+  const endKey = dateKey(now);
+
+  if (startKey !== endKey) {
+    // Split at midnight: end original at midnight of start day, create new sessions on intermediate days, final ends at now
+    const segments = [];
+    let cur = new Date(startDate);
+    while (true) {
+      const dayEndOfCur = new Date(cur);
+      dayEndOfCur.setHours(24, 0, 0, 0); // next midnight
+      if (dayEndOfCur <= now) {
+        segments.push({ start: cur.toISOString(), end: dayEndOfCur.toISOString() });
+        cur = new Date(dayEndOfCur);
+      } else {
+        segments.push({ start: cur.toISOString(), end: now.toISOString() });
+        break;
+      }
+    }
+    // First segment: update existing active session
+    active.end = segments[0].end;
+    // Remaining segments: create on their respective dates
+    for (let i = 1; i < segments.length; i++) {
+      const seg = segments[i];
+      const segDayKey = dateKey(new Date(seg.start));
+      const segDay = getDay(segDayKey);
+      const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) + '_' + i;
+      segDay.sessions.push({ id, start: seg.start, end: seg.end });
+    }
+  } else {
+    active.end = now.toISOString();
+  }
+
+  saveData(data);
+  render();
+}
+
+function addDistraction(delta) {
+  const day = getDay(viewingDate);
+  day.distractions = Math.max(0, (day.distractions || 0) + delta);
+  saveData(data);
+  render();
+}
+
+function endDay() {
+  // Stop active session if any
+  let active = null;
+  for (const k of Object.keys(data.days)) {
+    const a = getActiveSession(data.days[k]);
+    if (a) { active = a; break; }
+  }
+  if (active) stopSession();
+
+  const day = getDay(viewingDate);
+  day.ended = true;
+  saveData(data);
+  render();
+}
+
+function openEditModal(sessionId) {
+  // Find which day owns this session
+  for (const k of Object.keys(data.days)) {
+    const s = data.days[k].sessions.find(s => s.id === sessionId);
+    if (s) {
+      editingSession = { dayKey: k, id: sessionId };
+      const startDate = new Date(s.start);
+      const endDate = s.end ? new Date(s.end) : new Date();
+      document.getElementById('edit-start').value = isoToTimeInput(s.start);
+      document.getElementById('edit-end').value = s.end ? isoToTimeInput(s.end) : '';
+      document.getElementById('edit-modal').classList.add('show');
+      return;
+    }
+  }
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').classList.remove('show');
+  editingSession = null;
+}
+
+function saveEdit() {
+  if (!editingSession) return;
+  const day = data.days[editingSession.dayKey];
+  const s = day.sessions.find(s => s.id === editingSession.id);
+  if (!s) return;
+  const startStr = document.getElementById('edit-start').value;
+  const endStr = document.getElementById('edit-end').value;
+  if (!startStr || !endStr) {
+    alert('Both start and end times required.');
+    return;
+  }
+  const newStart = timeInputToIso(startStr, editingSession.dayKey);
+  const newEnd = timeInputToIso(endStr, editingSession.dayKey);
+  if (new Date(newEnd) <= new Date(newStart)) {
+    alert('End must be after start.');
+    return;
+  }
+  s.start = newStart;
+  s.end = newEnd;
+  saveData(data);
+  closeEditModal();
+  render();
+}
+
+function deleteSession() {
+  if (!editingSession) return;
+  if (!confirm('Delete this session?')) return;
+  const day = data.days[editingSession.dayKey];
+  day.sessions = day.sessions.filter(s => s.id !== editingSession.id);
+  saveData(data);
+  closeEditModal();
+  render();
+}
+
+function updateGoal(field, value) {
+  const day = getDay(viewingDate);
+  const num = parseFloat(value);
+  day.goals[field] = isNaN(num) ? 0 : num;
+  saveData(data);
+  // Don't full re-render to avoid losing focus on input
+  // Just update progress text
+  renderDay();
+}
+
+function updateWake(value) {
+  const day = getDay(viewingDate);
+  day.wakeTime = value || null;
+  saveData(data);
+}
+
+// ===== Wake-up auto-prompt =====
+function checkWakePrompt() {
+  const today = todayKey();
+  const day = data.days[today];
+  // Prompt if we have prior days but today has no wake time set yet
+  const priorDays = Object.keys(data.days).filter(k => k < today);
+  if (priorDays.length > 0 && (!day || !day.wakeTime)) {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    document.getElementById('wake-modal-input').value = `${h}:${m}`;
+    document.getElementById('wake-modal').classList.add('show');
+  }
+}
+
+// ===== Print =====
+function printRange(range) {
+  // For simplicity: hide things that shouldn't print, then window.print()
+  // We rely on existing day view for "day". For week/month, render a summary view temporarily.
+  if (range === 'day') {
+    window.print();
+    return;
+  }
+  printSummary(range);
+}
+
+function printSummary(range) {
+  const ref = parseKey(viewingDate);
+  let startDate, endDate, label;
+  if (range === 'week') {
+    const dow = ref.getDay();
+    startDate = new Date(ref); startDate.setDate(ref.getDate() - dow);
+    endDate = new Date(startDate); endDate.setDate(startDate.getDate() + 6);
+    label = `Week of ${startDate.toLocaleDateString(undefined, {month:'short', day:'numeric'})} – ${endDate.toLocaleDateString(undefined, {month:'short', day:'numeric', year:'numeric'})}`;
+  } else {
+    startDate = new Date(ref.getFullYear(), ref.getMonth(), 1);
+    endDate = new Date(ref.getFullYear(), ref.getMonth() + 1, 0);
+    label = startDate.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+  }
+
+  const keys = [];
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    keys.push(dateKey(d));
+  }
+
+  let totalDa = 0, totalBreak = 0, totalDist = 0, sessions = 0, daysWithData = 0;
+  let longest = 0, longestDate = '';
+  const rows = [];
+  for (const k of keys) {
+    if (!data.days[k]) continue;
+    daysWithData++;
+    const all = collectAllSessionsTouchingDate(k);
+    const clipped = splitSessionsAtMidnight(all, k);
+    const daMs = totalDaMs(clipped);
+    const breaks = computeBreaks(clipped, data.days[k].ended);
+    const breakMs = totalBreakMs(breaks);
+    totalDa += daMs;
+    totalBreak += breakMs;
+    totalDist += data.days[k].distractions || 0;
+    sessions += clipped.length;
+    for (const s of clipped) {
+      const dur = (s.end ? new Date(s.end) : new Date()) - new Date(s.start);
+      if (dur > longest) { longest = dur; longestDate = k; }
+    }
+    rows.push({
+      key: k,
+      wake: data.days[k].wakeTime || '—',
+      da: daMs,
+      breaks: breakMs,
+      sessions: clipped.length,
+      distractions: data.days[k].distractions || 0
+    });
+  }
+
+  const avgDa = daysWithData ? totalDa / daysWithData : 0;
+
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html><html><head><title>${label} — DA Tracker</title>
+    <style>
+      @page { margin: 0.5in; size: letter; }
+      body { font-family: -apple-system, sans-serif; color: #111; margin: 0; padding: 24px; font-size: 12px; }
+      h1, h2 { font-family: Helvetica, Arial, sans-serif; }
+      h1 { margin: 0 0 4px; font-size: 20px; }
+      .sub { color: #666; margin-bottom: 20px; }
+      .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+      .card { border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
+      .label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.1em; font-family: Helvetica, Arial, sans-serif; }
+      .value { font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 18px; margin-top: 4px; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
+      th { font-family: Helvetica, Arial, sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #888; }
+    </style></head><body>
+    <h1>DA Tracker — ${range === 'week' ? 'Weekly' : 'Monthly'} Summary</h1>
+    <div class="sub">${label}</div>
+    <div class="grid">
+      <div class="card"><div class="label">Total DA</div><div class="value">${formatDurationShort(totalDa)}</div></div>
+      <div class="card"><div class="label">Avg DA / Day</div><div class="value">${formatDurationShort(avgDa)}</div></div>
+      <div class="card"><div class="label">Total Breaks</div><div class="value">${formatDurationShort(totalBreak)}</div></div>
+      <div class="card"><div class="label">Sessions</div><div class="value">${sessions}</div></div>
+      <div class="card"><div class="label">Distractions</div><div class="value">${totalDist}</div></div>
+      <div class="card"><div class="label">Longest Session</div><div class="value">${formatDurationShort(longest)}</div></div>
+      <div class="card"><div class="label">Days Tracked</div><div class="value">${daysWithData}</div></div>
+      <div class="card"><div class="label">Days in Range</div><div class="value">${keys.length}</div></div>
+    </div>
+    <h2 style="font-size:13px;margin-bottom:8px;">Daily Breakdown</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Wake</th><th>DA</th><th>Breaks</th><th>Sessions</th><th>Distractions</th></tr></thead>
+      <tbody>
+        ${rows.map(r => `<tr>
+          <td>${formatShortDate(r.key)}</td>
+          <td>${r.wake}</td>
+          <td>${formatDurationShort(r.da)}</td>
+          <td>${formatDurationShort(r.breaks)}</td>
+          <td>${r.sessions}</td>
+          <td>${r.distractions}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>
+    <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
+    </body></html>
+  `);
+  win.document.close();
+}
+
+// ===== Export / Import / Clear =====
+function exportJson() {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `da-tracker-${todayKey()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJson(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported.days) throw new Error('Invalid format');
+      if (!confirm('This will replace all current data. Continue?')) return;
+      data = imported;
+      saveData(data);
+      render();
+    } catch (err) {
+      alert('Import failed: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearAll() {
+  if (!confirm('Delete all tracking data? This cannot be undone.')) return;
+  if (!confirm('Are you sure? This is permanent.')) return;
+  data = { days: {} };
+  saveData(data);
+  viewingDate = todayKey();
+  render();
+}
+
+// ===== Wire up =====
+document.getElementById('prev-day').addEventListener('click', () => {
+  viewingDate = shiftKey(viewingDate, -1);
+  render();
+});
+document.getElementById('next-day').addEventListener('click', () => {
+  viewingDate = shiftKey(viewingDate, 1);
+  render();
+});
+document.getElementById('today-btn').addEventListener('click', () => {
+  viewingDate = todayKey();
+  currentView = 'day';
+  render();
+});
+document.getElementById('history-btn').addEventListener('click', () => {
+  currentView = 'history';
+  render();
+});
+document.getElementById('back-day-btn').addEventListener('click', () => {
+  currentView = 'day';
+  render();
+});
+
+document.getElementById('timer-btn').addEventListener('click', () => {
+  const day = getDay(viewingDate);
+  // Only allow start/stop on today
+  if (viewingDate !== todayKey()) {
+    if (!confirm('You are viewing a past/future day. Jump to today to start a session?')) return;
+    viewingDate = todayKey();
+    render();
+    return;
+  }
+  if (getActiveSession(day)) {
+    stopSession();
+  } else {
+    startSession();
+  }
+});
+
+document.getElementById('dist-plus').addEventListener('click', () => addDistraction(1));
+document.getElementById('dist-minus').addEventListener('click', () => addDistraction(-1));
+
+document.getElementById('end-day-btn').addEventListener('click', () => {
+  if (confirm('End the day? This stops any active session and prevents the gap until your next session from being counted as a break.')) {
+    endDay();
+  }
+});
+
+document.getElementById('wake-input').addEventListener('change', e => updateWake(e.target.value));
+
+document.getElementById('goal-da').addEventListener('change', e => updateGoal('daHours', e.target.value));
+document.getElementById('goal-break-total').addEventListener('change', e => updateGoal('breakTotalHours', e.target.value));
+document.getElementById('goal-break-per').addEventListener('change', e => updateGoal('breakPerMin', e.target.value));
+
+document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
+document.getElementById('edit-save').addEventListener('click', saveEdit);
+document.getElementById('edit-delete').addEventListener('click', deleteSession);
+
+document.getElementById('wake-modal-save').addEventListener('click', () => {
+  const val = document.getElementById('wake-modal-input').value;
+  if (val) {
+    const day = getDay(todayKey());
+    day.wakeTime = val;
+    saveData(data);
+  }
+  document.getElementById('wake-modal').classList.remove('show');
+  render();
+});
+
+document.querySelectorAll('[data-print]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    btn.closest('details').open = false;
+    printRange(btn.getAttribute('data-print'));
+  });
+});
+
+document.getElementById('export-btn').addEventListener('click', exportJson);
+document.getElementById('import-btn').addEventListener('click', () => document.getElementById('import-file').click());
+document.getElementById('import-file').addEventListener('change', e => {
+  if (e.target.files[0]) importJson(e.target.files[0]);
+});
+document.getElementById('clear-btn').addEventListener('click', clearAll);
+
+// Close print menu when clicking outside
+document.addEventListener('click', (e) => {
+  document.querySelectorAll('details.print-menu').forEach(d => {
+    if (!d.contains(e.target)) d.open = false;
+  });
+});
+
+// ===== Init =====
+checkWakePrompt();
+render();
+
+// Keep timer ticking even if user navigates between views
+setInterval(() => {
+  if (currentView === 'day') {
+    // Lightweight: only update timer if active
+    let hasActive = false;
+    for (const k of Object.keys(data.days)) {
+      if (getActiveSession(data.days[k])) { hasActive = true; break; }
+    }
+    // If no active timer interval running but should be, re-render
+    if (hasActive && !activeTimerInterval) renderDay();
+  }
+}, 30000);
+
+</script>
+</body>
+</html>

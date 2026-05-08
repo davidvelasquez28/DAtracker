@@ -40,7 +40,6 @@
     padding: 32px 24px 80px;
   }
 
-  /* Top bar */
   .topbar {
     display: flex;
     align-items: center;
@@ -114,7 +113,6 @@
     padding: 8px 12px;
   }
 
-  /* Wake up */
   .wake {
     display: flex;
     align-items: center;
@@ -133,7 +131,6 @@
     font-family: inherit;
   }
 
-  /* Section title */
   .section-title {
     font-size: 11px;
     text-transform: uppercase;
@@ -144,7 +141,6 @@
     font-weight: 700;
   }
 
-  /* Goals */
   .goals {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -199,7 +195,6 @@
   }
   .bar-fill.over { background: var(--danger); }
 
-  /* Timer */
   .timer-block {
     margin: 32px 0 24px;
     text-align: center;
@@ -222,6 +217,12 @@
     margin-bottom: 16px;
     font-variant-numeric: tabular-nums;
   }
+  .timer-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
   .timer-btn {
     background: var(--fg);
     color: var(--bg);
@@ -237,8 +238,21 @@
   }
   .timer-btn:hover { opacity: 0.85; }
   .timer-btn.stop { background: var(--danger); }
+  .timer-btn-secondary {
+    background: none;
+    color: var(--fg);
+    border: 1px solid var(--line-strong);
+    padding: 12px 24px;
+    font-size: 14px;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    border-radius: 4px;
+  }
+  .timer-btn-secondary:hover { background: var(--soft); }
 
-  /* Distraction counter */
   .distraction-row {
     display: flex;
     align-items: center;
@@ -288,19 +302,19 @@
   }
   .distraction-controls button:hover { opacity: 0.85; }
 
-  /* Sessions list */
   .sessions {
     margin-top: 8px;
   }
   .session-item, .break-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
     padding: 10px 12px;
     border-bottom: 1px solid var(--line);
-    gap: 12px;
   }
   .session-item:last-child, .break-item:last-child { border-bottom: none; }
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
   .session-time {
     font-variant-numeric: tabular-nums;
   }
@@ -310,11 +324,35 @@
     margin-left: auto;
     margin-right: 8px;
   }
+  .session-difficulty {
+    font-size: 12px;
+    margin-right: 8px;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+  }
+  .session-difficulty.d1 { color: #16a34a; }
+  .session-difficulty.d2 { color: #65a30d; }
+  .session-difficulty.d3 { color: #ca8a04; }
+  .session-difficulty.d4 { color: #ea580c; }
+  .session-difficulty.d5 { color: #b91c1c; }
+  .session-notes {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #444;
+    white-space: pre-wrap;
+    padding: 6px 8px;
+    background: var(--soft);
+    border-radius: 4px;
+  }
   .break-item {
     color: var(--muted);
     font-size: 13px;
     padding-left: 24px;
     background: var(--soft);
+  }
+  .break-item .session-notes {
+    background: var(--bg);
+    color: #444;
   }
   .session-controls {
     display: flex;
@@ -338,7 +376,22 @@
     font-style: italic;
   }
 
-  /* End day */
+  .after-da {
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .after-da textarea {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    resize: vertical;
+    min-height: 60px;
+  }
+
   .end-day-row {
     margin-top: 32px;
     text-align: center;
@@ -367,7 +420,6 @@
     color: var(--muted);
   }
 
-  /* Modal */
   .modal-bg {
     display: none;
     position: fixed;
@@ -376,14 +428,17 @@
     align-items: center;
     justify-content: center;
     z-index: 100;
+    padding: 16px;
   }
   .modal-bg.show { display: flex; }
   .modal {
     background: var(--bg);
     padding: 24px;
     border-radius: 8px;
-    max-width: 400px;
-    width: 90%;
+    max-width: 460px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
   }
   .modal h3 {
     margin: 0 0 16px;
@@ -398,19 +453,48 @@
   .modal-row label {
     font-size: 12px;
     color: var(--muted);
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
-  .modal input {
+  .modal input, .modal textarea, .modal select {
     border: 1px solid var(--line);
     padding: 8px;
     border-radius: 4px;
     font-size: 14px;
     font-family: inherit;
   }
+  .modal textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+  .difficulty-picker {
+    display: flex;
+    gap: 4px;
+  }
+  .difficulty-picker button {
+    flex: 1;
+    border: 1px solid var(--line);
+    background: none;
+    padding: 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .difficulty-picker button.selected {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+  }
   .modal-buttons {
     display: flex;
     gap: 8px;
     justify-content: flex-end;
     margin-top: 16px;
+    flex-wrap: wrap;
   }
   .modal-buttons button {
     border: 1px solid var(--line);
@@ -430,7 +514,6 @@
     color: var(--danger);
   }
 
-  /* History view */
   .view { display: none; }
   .view.active { display: block; }
   .stat-grid {
@@ -488,7 +571,6 @@
   }
   .day-row .day-link:hover { text-decoration: underline; }
 
-  /* Export / import */
   .data-controls {
     margin-top: 32px;
     padding-top: 16px;
@@ -509,17 +591,6 @@
   }
   .data-controls button:hover { background: var(--soft); }
 
-  /* Print */
-  @media print {
-    .no-print { display: none !important; }
-    body { font-size: 12px; }
-    .container { padding: 0; max-width: 100%; }
-    .timer-block, .distraction-row { border: 1px solid #ccc; }
-    .print-only { display: block !important; }
-    @page { margin: 0.5in; size: letter; }
-  }
-  .print-only { display: none; }
-
   @media (max-width: 600px) {
     .goals { grid-template-columns: 1fr; }
     .stat-grid { grid-template-columns: 1fr; }
@@ -533,9 +604,8 @@
 
 <div class="container">
 
-  <!-- TODAY VIEW -->
   <div id="day-view" class="view active">
-    <div class="topbar no-print">
+    <div class="topbar">
       <div class="nav">
         <button id="prev-day" title="Previous day">←</button>
         <div class="date-label" id="date-label">—</div>
@@ -554,8 +624,6 @@
         </details>
       </div>
     </div>
-
-    <div class="print-only" id="print-header"></div>
 
     <div class="wake">
       <span class="wake-label">Wake up:</span>
@@ -589,10 +657,13 @@
       </div>
     </div>
 
-    <div class="timer-block no-print">
+    <div class="timer-block">
       <div class="timer-state" id="timer-state">Ready</div>
       <div class="timer-display" id="timer-display">00:00:00</div>
-      <button class="timer-btn" id="timer-btn">Start Session</button>
+      <div class="timer-buttons">
+        <button class="timer-btn" id="timer-btn">Start Session</button>
+        <button class="timer-btn-secondary" id="cancel-btn" style="display:none;">Cancel</button>
+      </div>
     </div>
 
     <div class="distraction-row">
@@ -600,16 +671,24 @@
         <div class="distraction-count" id="distraction-count">0</div>
         <div class="distraction-label">Distractions</div>
       </div>
-      <div class="distraction-controls no-print">
+      <div class="distraction-controls">
         <button id="dist-minus">−</button>
         <button class="plus" id="dist-plus">+1</button>
       </div>
     </div>
 
-    <div class="section-title">Sessions</div>
+    <div style="display:flex; align-items:center; justify-content:space-between; margin: 32px 0 12px;">
+      <div class="section-title" style="margin:0;">Sessions</div>
+      <button id="add-session-btn" style="background:none; border:1px solid var(--line); padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-family:Helvetica,Arial,sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">+ Add Session</button>
+    </div>
     <div class="sessions" id="sessions-list"></div>
 
-    <div class="end-day-row no-print">
+    <div class="section-title">After DA</div>
+    <div class="after-da">
+      <textarea id="after-da-notes" placeholder="What did you do after you stopped working DA? e.g. went for a walk, made dinner, watched a show..."></textarea>
+    </div>
+
+    <div class="end-day-row">
       <button class="end-day-btn" id="end-day-btn">End Day</button>
       <div class="day-ended-banner" id="day-ended-banner" style="display:none;">
         Day ended. Breaks won't accrue further.
@@ -617,9 +696,8 @@
     </div>
   </div>
 
-  <!-- HISTORY VIEW -->
   <div id="history-view" class="view">
-    <div class="topbar no-print">
+    <div class="topbar">
       <div class="nav">
         <div class="date-label">All Time Stats</div>
       </div>
@@ -633,7 +711,7 @@
     <div class="section-title">Days</div>
     <div id="days-list"></div>
 
-    <div class="data-controls no-print">
+    <div class="data-controls">
       <button id="export-btn">Export JSON</button>
       <button id="import-btn">Import JSON</button>
       <input type="file" id="import-file" accept="application/json" style="display:none;">
@@ -642,17 +720,31 @@
   </div>
 </div>
 
-<!-- Edit session modal -->
 <div class="modal-bg" id="edit-modal">
   <div class="modal">
     <h3 id="edit-modal-title">Edit Session</h3>
-    <div class="modal-row">
+    <div class="modal-row" id="edit-time-row">
       <label>Start time</label>
       <input type="time" id="edit-start" step="1">
     </div>
-    <div class="modal-row">
+    <div class="modal-row" id="edit-end-row">
       <label>End time</label>
       <input type="time" id="edit-end" step="1">
+    </div>
+    <div class="modal-row" id="edit-difficulty-row">
+      <label>Difficulty</label>
+      <div class="difficulty-picker" id="difficulty-picker">
+        <button data-diff="1">1</button>
+        <button data-diff="2">2</button>
+        <button data-diff="3">3</button>
+        <button data-diff="4">4</button>
+        <button data-diff="5">5</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;">1 = easy, 5 = brutal</div>
+    </div>
+    <div class="modal-row">
+      <label id="edit-notes-label">Notes</label>
+      <textarea id="edit-notes" placeholder=""></textarea>
     </div>
     <div class="modal-buttons">
       <button class="danger" id="edit-delete">Delete</button>
@@ -662,7 +754,6 @@
   </div>
 </div>
 
-<!-- Wake-up prompt modal -->
 <div class="modal-bg" id="wake-modal">
   <div class="modal">
     <h3>Good morning. What time did you wake up?</h3>
@@ -676,7 +767,6 @@
 </div>
 
 <script>
-// ===== Data Layer =====
 const STORAGE_KEY = 'da-tracker-v1';
 
 function loadData() {
@@ -697,12 +787,11 @@ let data = loadData();
 let viewingDate = todayKey();
 let currentView = 'day';
 let activeTimerInterval = null;
-let editingSession = null;
+let editingTarget = null;
+let selectedDifficulty = null;
 
-// ===== Date helpers =====
 function todayKey() {
-  const d = new Date();
-  return dateKey(d);
+  return dateKey(new Date());
 }
 
 function dateKey(d) {
@@ -733,20 +822,23 @@ function formatShortDate(key) {
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-// ===== Day helpers =====
 function getDay(key) {
   if (!data.days[key]) {
-    // Find most recent day with goals to inherit
     const goals = inheritGoals(key);
     data.days[key] = {
       wakeTime: null,
       goals: goals,
-      sessions: [], // {id, start (ISO), end (ISO or null if active)}
+      sessions: [],
+      breakNotes: {},
+      afterDaNotes: '',
       distractions: 0,
       ended: false
     };
   }
-  return data.days[key];
+  const d = data.days[key];
+  if (!d.breakNotes) d.breakNotes = {};
+  if (d.afterDaNotes === undefined) d.afterDaNotes = '';
+  return d;
 }
 
 function inheritGoals(key) {
@@ -761,7 +853,14 @@ function getActiveSession(day) {
   return day.sessions.find(s => !s.end);
 }
 
-// ===== Time formatting =====
+function findActiveAnywhere() {
+  for (const k of Object.keys(data.days)) {
+    const a = getActiveSession(data.days[k]);
+    if (a) return { dayKey: k, session: a };
+  }
+  return null;
+}
+
 function formatDuration(ms) {
   if (ms < 0) ms = 0;
   const totalSec = Math.floor(ms / 1000);
@@ -803,12 +902,17 @@ function timeInputToIso(timeStr, dateKeyStr) {
   return d.toISOString();
 }
 
-// ===== Session computations (with midnight split) =====
-// Each day stores raw sessions; for display we split sessions that cross midnight
-// For storage, we'll always commit sessions split at midnight when stopped.
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
 
 function splitSessionsAtMidnight(sessions, dateKeyStr) {
-  // Return sessions clipped to this date's window
   const dayStart = parseKey(dateKeyStr).getTime();
   const dayEnd = dayStart + 24 * 60 * 60 * 1000;
   return sessions.map(s => {
@@ -821,6 +925,8 @@ function splitSessionsAtMidnight(sessions, dateKeyStr) {
       id: s.id,
       start: new Date(clippedStart).toISOString(),
       end: s.end ? new Date(clippedEnd).toISOString() : null,
+      notes: s.notes || '',
+      difficulty: s.difficulty || null,
       _live: !s.end,
       _crossedStart: start < dayStart,
       _crossedEnd: end > dayEnd
@@ -828,8 +934,7 @@ function splitSessionsAtMidnight(sessions, dateKeyStr) {
   }).filter(Boolean);
 }
 
-function computeBreaks(sessions, dayEnded) {
-  // sessions are already clipped/sorted; compute gaps between consecutive completed sessions
+function computeBreaks(sessions) {
   const sorted = [...sessions].sort((a, b) => new Date(a.start) - new Date(b.start));
   const breaks = [];
   for (let i = 0; i < sorted.length - 1; i++) {
@@ -838,7 +943,13 @@ function computeBreaks(sessions, dayEnded) {
     if (!prev.end) continue;
     const gap = new Date(next.start) - new Date(prev.end);
     if (gap > 0) {
-      breaks.push({ start: prev.end, end: next.start, duration: gap });
+      breaks.push({
+        prevId: prev.id,
+        nextId: next.id,
+        start: prev.end,
+        end: next.start,
+        duration: gap
+      });
     }
   }
   return breaks;
@@ -855,7 +966,10 @@ function totalBreakMs(breaks) {
   return breaks.reduce((sum, b) => sum + b.duration, 0);
 }
 
-// ===== Rendering =====
+function breakKey(prevId, nextId) {
+  return `${prevId}->${nextId}`;
+}
+
 function render() {
   if (currentView === 'day') {
     renderDay();
@@ -872,25 +986,19 @@ function renderDay() {
 
   const day = getDay(viewingDate);
 
-  // Wake input
-  const wakeInput = document.getElementById('wake-input');
-  wakeInput.value = day.wakeTime || '';
-
-  // Goals
+  document.getElementById('wake-input').value = day.wakeTime || '';
   document.getElementById('goal-da').value = day.goals.daHours || '';
   document.getElementById('goal-break-total').value = day.goals.breakTotalHours || '';
   document.getElementById('goal-break-per').value = day.goals.breakPerMin || '';
+  document.getElementById('after-da-notes').value = day.afterDaNotes || '';
 
-  // Sessions for this date (clipped at midnight)
   const allSessions = collectAllSessionsTouchingDate(viewingDate);
   const clipped = splitSessionsAtMidnight(allSessions, viewingDate);
-  const breaks = computeBreaks(clipped, day.ended);
+  const breaks = computeBreaks(clipped);
 
-  // Stats
   const daMs = totalDaMs(clipped);
   const breakMs = totalBreakMs(breaks);
 
-  // DA progress
   const daGoalMs = (day.goals.daHours || 0) * 3600000;
   document.getElementById('da-progress').textContent =
     `${formatDurationShort(daMs)} / ${day.goals.daHours || 0}h`;
@@ -899,7 +1007,6 @@ function renderDay() {
   daBar.style.width = daPct + '%';
   daBar.classList.remove('over');
 
-  // Break total progress
   const breakGoalMs = (day.goals.breakTotalHours || 0) * 3600000;
   document.getElementById('break-total-progress').textContent =
     `${formatDurationShort(breakMs)} / ${day.goals.breakTotalHours || 0}h`;
@@ -908,7 +1015,6 @@ function renderDay() {
   breakBar.style.width = breakPct + '%';
   breakBar.classList.toggle('over', breakGoalMs > 0 && breakMs > breakGoalMs);
 
-  // Per break
   const breakPerGoalMs = (day.goals.breakPerMin || 0) * 60000;
   const overBreaks = breakPerGoalMs > 0 ? breaks.filter(b => b.duration > breakPerGoalMs).length : 0;
   const avgBreak = breaks.length > 0 ? breakMs / breaks.length : 0;
@@ -917,28 +1023,16 @@ function renderDay() {
       ? `Avg ${formatDurationShort(avgBreak)} · ${overBreaks} over goal`
       : 'No breaks yet';
 
-  // Distractions
   document.getElementById('distraction-count').textContent = day.distractions || 0;
 
-  // Timer
   renderTimer(day);
-
-  // Sessions list (interleaved with breaks)
   renderSessionsList(clipped, breaks, day);
 
-  // End day banner
   document.getElementById('day-ended-banner').style.display = day.ended ? 'block' : 'none';
   document.getElementById('end-day-btn').style.display = day.ended ? 'none' : 'inline-block';
-
-  // Print header
-  document.getElementById('print-header').innerHTML = `
-    <h1 style="font-family:Helvetica,Arial,sans-serif;margin:0 0 4px;">DA Tracker</h1>
-    <div style="color:#666;margin-bottom:16px;">${formatDate(viewingDate)}</div>
-  `;
 }
 
 function collectAllSessionsTouchingDate(dateKeyStr) {
-  // Sessions stored on dateKeyStr, plus possibly previous day's sessions that crossed into this day
   const result = [];
   const day = data.days[dateKeyStr];
   if (day) result.push(...day.sessions);
@@ -957,10 +1051,11 @@ function collectAllSessionsTouchingDate(dateKeyStr) {
 }
 
 function renderTimer(day) {
-  const active = getActiveSession(day);
+  const active = findActiveAnywhere();
   const stateEl = document.getElementById('timer-state');
   const displayEl = document.getElementById('timer-display');
   const btn = document.getElementById('timer-btn');
+  const cancelBtn = document.getElementById('cancel-btn');
 
   if (activeTimerInterval) {
     clearInterval(activeTimerInterval);
@@ -971,32 +1066,33 @@ function renderTimer(day) {
     stateEl.textContent = 'Working';
     btn.textContent = 'Stop Session';
     btn.classList.add('stop');
+    cancelBtn.style.display = 'inline-block';
     const update = () => {
-      const ms = Date.now() - new Date(active.start).getTime();
+      const ms = Date.now() - new Date(active.session.start).getTime();
       displayEl.textContent = formatDuration(ms);
     };
     update();
     activeTimerInterval = setInterval(update, 1000);
-  } else if (day.ended) {
-    stateEl.textContent = 'Day Ended';
-    displayEl.textContent = '00:00:00';
-    btn.textContent = 'Start Session';
-    btn.classList.remove('stop');
   } else {
-    // Check if there's a last completed session to show on-break time
-    const completed = day.sessions.filter(s => s.end).sort((a, b) => new Date(b.end) - new Date(a.end));
-    if (completed.length > 0 && viewingDate === todayKey()) {
-      const last = completed[0];
-      stateEl.textContent = 'On Break';
-      const update = () => {
-        const ms = Date.now() - new Date(last.end).getTime();
-        displayEl.textContent = formatDuration(ms);
-      };
-      update();
-      activeTimerInterval = setInterval(update, 1000);
-    } else {
-      stateEl.textContent = 'Ready';
+    cancelBtn.style.display = 'none';
+    if (day.ended) {
+      stateEl.textContent = 'Day Ended';
       displayEl.textContent = '00:00:00';
+    } else {
+      const completed = day.sessions.filter(s => s.end).sort((a, b) => new Date(b.end) - new Date(a.end));
+      if (completed.length > 0 && viewingDate === todayKey()) {
+        const last = completed[0];
+        stateEl.textContent = 'On Break';
+        const update = () => {
+          const ms = Date.now() - new Date(last.end).getTime();
+          displayEl.textContent = formatDuration(ms);
+        };
+        update();
+        activeTimerInterval = setInterval(update, 1000);
+      } else {
+        stateEl.textContent = 'Ready';
+        displayEl.textContent = '00:00:00';
+      }
     }
     btn.textContent = 'Start Session';
     btn.classList.remove('stop');
@@ -1021,29 +1117,41 @@ function renderSessionsList(sessions, breaks, day) {
     const live = !s.end;
     const crossed = s._crossedStart || s._crossedEnd ? ' <span style="color:var(--muted);font-size:11px;">(midnight)</span>' : '';
     const editable = !live && !s._crossedStart && !s._crossedEnd;
+    const diff = s.difficulty ? `<span class="session-difficulty d${s.difficulty}">D${s.difficulty}</span>` : '';
+    const notes = s.notes ? `<div class="session-notes">${escapeHtml(s.notes)}</div>` : '';
+
     html += `
       <div class="session-item">
-        <div>
+        <div class="item-row">
           <span class="session-time">${formatTimeOfDay(s.start)} – ${live ? '<em>now</em>' : formatTimeOfDay(s.end)}</span>${crossed}
+          <span class="session-duration">${formatDurationShort(dur)}${live ? ' •' : ''}</span>
+          ${diff}
+          <div class="session-controls">
+            ${editable ? `<button data-edit-session="${s.id}" title="Edit">✎</button>` : ''}
+          </div>
         </div>
-        <div class="session-duration">${formatDurationShort(dur)}${live ? ' •' : ''}</div>
-        <div class="session-controls no-print">
-          ${editable ? `<button data-edit="${s.id}" title="Edit">✎</button>` : ''}
-        </div>
+        ${notes}
       </div>
     `;
-    // Break after this session?
     if (i < sorted.length - 1) {
       const next = sorted[i + 1];
       const gap = new Date(next.start) - new Date(s.end || s.start);
       if (gap > 0 && s.end) {
         const perGoal = (day.goals.breakPerMin || 0) * 60000;
         const over = perGoal > 0 && gap > perGoal;
+        const bk = breakKey(s.id, next.id);
+        const bnote = day.breakNotes[bk] || '';
+        const bnoteHtml = bnote ? `<div class="session-notes">${escapeHtml(bnote)}</div>` : '';
         html += `
           <div class="break-item">
-            <span>Break</span>
-            <span class="session-duration" style="${over ? 'color:var(--danger);' : ''}">${formatDurationShort(gap)}</span>
-            <span></span>
+            <div class="item-row">
+              <span>Break</span>
+              <span class="session-duration" style="${over ? 'color:var(--danger);' : ''}">${formatDurationShort(gap)}</span>
+              <div class="session-controls">
+                <button data-edit-break="${bk}" title="Edit break notes">✎</button>
+              </div>
+            </div>
+            ${bnoteHtml}
           </div>
         `;
       }
@@ -1051,20 +1159,19 @@ function renderSessionsList(sessions, breaks, day) {
   }
   list.innerHTML = html;
 
-  // Wire up edit buttons
-  list.querySelectorAll('[data-edit]').forEach(btn => {
-    btn.addEventListener('click', () => openEditModal(btn.getAttribute('data-edit')));
+  list.querySelectorAll('[data-edit-session]').forEach(btn => {
+    btn.addEventListener('click', () => openEditSession(btn.getAttribute('data-edit-session')));
+  });
+  list.querySelectorAll('[data-edit-break]').forEach(btn => {
+    btn.addEventListener('click', () => openEditBreak(btn.getAttribute('data-edit-break')));
   });
 }
 
-// ===== History view =====
 function renderHistory() {
   document.getElementById('day-view').classList.remove('active');
   document.getElementById('history-view').classList.add('active');
 
   const days = Object.keys(data.days).sort();
-
-  // Aggregate stats
   const stats = computeAggregateStats();
   const grid = document.getElementById('stat-grid');
 
@@ -1105,6 +1212,10 @@ function renderHistory() {
       <div class="stat-value">${stats.avgBreak}</div>
     </div>
     <div class="stat-card">
+      <div class="stat-label">Avg Difficulty</div>
+      <div class="stat-value">${stats.avgDifficulty}</div>
+    </div>
+    <div class="stat-card">
       <div class="stat-label">Avg Distractions / Day</div>
       <div class="stat-value">${stats.avgDistractions}</div>
     </div>
@@ -1113,13 +1224,8 @@ function renderHistory() {
       <div class="stat-value">${stats.bestDayDa}</div>
       <div class="stat-sub">${stats.bestDayDate || ''}</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-label">Days Tracked</div>
-      <div class="stat-value">${days.length}</div>
-    </div>
   `;
 
-  // Days list
   const sortedDesc = [...days].sort().reverse();
   let html = `
     <div class="day-row header">
@@ -1165,6 +1271,7 @@ function computeAggregateStats() {
   let sessionDurations = [];
   let breakDurations = [];
   let distractions = [];
+  let difficulties = [];
   let longest = 0, longestDate = '';
   let bestDayMs = 0, bestDayKey = '';
 
@@ -1192,9 +1299,10 @@ function computeAggregateStats() {
       const dur = end - new Date(s.start);
       sessionDurations.push(dur);
       if (dur > longest) { longest = dur; longestDate = k; }
+      if (s.difficulty) difficulties.push(s.difficulty);
     }
 
-    const breaks = computeBreaks(sorted, d.ended);
+    const breaks = computeBreaks(sorted);
     for (const b of breaks) breakDurations.push(b.duration);
 
     distractions.push(d.distractions || 0);
@@ -1218,45 +1326,40 @@ function computeAggregateStats() {
     longestSessionDate: longestDate ? formatShortDate(longestDate) : '',
     avgSession: sessionDurations.length ? formatDurationShort(avg(sessionDurations)) : '—',
     avgBreak: breakDurations.length ? formatDurationShort(avg(breakDurations)) : '—',
+    avgDifficulty: difficulties.length ? avg(difficulties).toFixed(1) : '—',
     avgDistractions: distractions.length ? (avg(distractions)).toFixed(1) : '0',
     bestDayDa: formatDurationShort(bestDayMs),
     bestDayDate: bestDayKey ? formatShortDate(bestDayKey) : ''
   };
 }
 
-// ===== Actions =====
 function startSession() {
   const day = getDay(viewingDate);
   if (day.ended) return;
-  if (getActiveSession(day)) return;
+  if (findActiveAnywhere()) return;
   const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-  day.sessions.push({ id, start: new Date().toISOString(), end: null });
+  day.sessions.push({ id, start: new Date().toISOString(), end: null, notes: '', difficulty: null });
   saveData(data);
   render();
 }
 
 function stopSession() {
-  // Find active session in any day (in case session crosses midnight)
-  let active = null;
-  let activeDayKey = null;
-  for (const k of Object.keys(data.days)) {
-    const a = getActiveSession(data.days[k]);
-    if (a) { active = a; activeDayKey = k; break; }
-  }
+  const active = findActiveAnywhere();
   if (!active) return;
 
-  const startDate = new Date(active.start);
+  const startDate = new Date(active.session.start);
   const now = new Date();
   const startKey = dateKey(startDate);
   const endKey = dateKey(now);
 
+  let primarySessionId = active.session.id;
+
   if (startKey !== endKey) {
-    // Split at midnight: end original at midnight of start day, create new sessions on intermediate days, final ends at now
     const segments = [];
     let cur = new Date(startDate);
     while (true) {
       const dayEndOfCur = new Date(cur);
-      dayEndOfCur.setHours(24, 0, 0, 0); // next midnight
+      dayEndOfCur.setHours(24, 0, 0, 0);
       if (dayEndOfCur <= now) {
         segments.push({ start: cur.toISOString(), end: dayEndOfCur.toISOString() });
         cur = new Date(dayEndOfCur);
@@ -1265,22 +1368,59 @@ function stopSession() {
         break;
       }
     }
-    // First segment: update existing active session
-    active.end = segments[0].end;
-    // Remaining segments: create on their respective dates
+    active.session.end = segments[0].end;
     for (let i = 1; i < segments.length; i++) {
       const seg = segments[i];
       const segDayKey = dateKey(new Date(seg.start));
       const segDay = getDay(segDayKey);
       const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) + '_' + i;
-      segDay.sessions.push({ id, start: seg.start, end: seg.end });
+      segDay.sessions.push({ id, start: seg.start, end: seg.end, notes: '', difficulty: null });
+      if (i === segments.length - 1) {
+        primarySessionId = id;
+      }
     }
   } else {
-    active.end = now.toISOString();
+    active.session.end = now.toISOString();
   }
 
   saveData(data);
   render();
+  openEditSession(primarySessionId, true);
+}
+
+function cancelSession() {
+  const active = findActiveAnywhere();
+  if (!active) return;
+  if (!confirm('Cancel this active session? It will be removed entirely.')) return;
+  data.days[active.dayKey].sessions = data.days[active.dayKey].sessions.filter(s => s.id !== active.session.id);
+  saveData(data);
+  render();
+}
+
+function addManualSession() {
+  const day = getDay(viewingDate);
+  // Default to a 1-hour block. If viewing today, use one hour ago to now. Otherwise, noon-1pm.
+  let startDate, endDate;
+  if (viewingDate === todayKey()) {
+    endDate = new Date();
+    startDate = new Date(endDate.getTime() - 60 * 60 * 1000);
+  } else {
+    startDate = parseKey(viewingDate);
+    startDate.setHours(12, 0, 0, 0);
+    endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+  }
+  const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  day.sessions.push({
+    id,
+    start: startDate.toISOString(),
+    end: endDate.toISOString(),
+    notes: '',
+    difficulty: null
+  });
+  saveData(data);
+  render();
+  // Open the edit modal so user can adjust times immediately
+  openEditSession(id, false);
 }
 
 function addDistraction(delta) {
@@ -1291,70 +1431,156 @@ function addDistraction(delta) {
 }
 
 function endDay() {
-  // Stop active session if any
-  let active = null;
-  for (const k of Object.keys(data.days)) {
-    const a = getActiveSession(data.days[k]);
-    if (a) { active = a; break; }
-  }
-  if (active) stopSession();
-
+  const active = findActiveAnywhere();
+  if (active) stopSessionSilent();
   const day = getDay(viewingDate);
   day.ended = true;
   saveData(data);
   render();
 }
 
-function openEditModal(sessionId) {
-  // Find which day owns this session
+function stopSessionSilent() {
+  const active = findActiveAnywhere();
+  if (!active) return;
+  const startDate = new Date(active.session.start);
+  const now = new Date();
+  const startKey = dateKey(startDate);
+  const endKey = dateKey(now);
+  if (startKey !== endKey) {
+    const segments = [];
+    let cur = new Date(startDate);
+    while (true) {
+      const dayEndOfCur = new Date(cur);
+      dayEndOfCur.setHours(24, 0, 0, 0);
+      if (dayEndOfCur <= now) {
+        segments.push({ start: cur.toISOString(), end: dayEndOfCur.toISOString() });
+        cur = new Date(dayEndOfCur);
+      } else {
+        segments.push({ start: cur.toISOString(), end: now.toISOString() });
+        break;
+      }
+    }
+    active.session.end = segments[0].end;
+    for (let i = 1; i < segments.length; i++) {
+      const seg = segments[i];
+      const segDayKey = dateKey(new Date(seg.start));
+      const segDay = getDay(segDayKey);
+      const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) + '_' + i;
+      segDay.sessions.push({ id, start: seg.start, end: seg.end, notes: '', difficulty: null });
+    }
+  } else {
+    active.session.end = now.toISOString();
+  }
+  saveData(data);
+}
+
+function openEditSession(sessionId, isStopping) {
   for (const k of Object.keys(data.days)) {
     const s = data.days[k].sessions.find(s => s.id === sessionId);
     if (s) {
-      editingSession = { dayKey: k, id: sessionId };
-      const startDate = new Date(s.start);
-      const endDate = s.end ? new Date(s.end) : new Date();
+      editingTarget = { type: 'session', dayKey: k, id: sessionId, isStopping: !!isStopping };
+      document.getElementById('edit-modal-title').textContent = isStopping ? 'Session Complete' : 'Edit Session';
+      document.getElementById('edit-time-row').style.display = isStopping ? 'none' : 'flex';
+      document.getElementById('edit-end-row').style.display = isStopping ? 'none' : 'flex';
+      document.getElementById('edit-difficulty-row').style.display = 'flex';
+      document.getElementById('edit-notes-label').textContent = 'How did it go?';
+      document.getElementById('edit-notes').placeholder = 'What you worked on, how it went, blockers, anything notable...';
       document.getElementById('edit-start').value = isoToTimeInput(s.start);
       document.getElementById('edit-end').value = s.end ? isoToTimeInput(s.end) : '';
+      document.getElementById('edit-notes').value = s.notes || '';
+      selectedDifficulty = s.difficulty || null;
+      updateDifficultyPicker();
+      document.getElementById('edit-delete').style.display = isStopping ? 'none' : 'inline-block';
       document.getElementById('edit-modal').classList.add('show');
+      setTimeout(() => document.getElementById('edit-notes').focus(), 50);
       return;
     }
   }
 }
 
+function openEditBreak(bkey) {
+  const day = getDay(viewingDate);
+  editingTarget = { type: 'break', dayKey: viewingDate, id: bkey, isStopping: false };
+  document.getElementById('edit-modal-title').textContent = 'Break Notes';
+  document.getElementById('edit-time-row').style.display = 'none';
+  document.getElementById('edit-end-row').style.display = 'none';
+  document.getElementById('edit-difficulty-row').style.display = 'none';
+  document.getElementById('edit-notes-label').textContent = 'What did you do on this break?';
+  document.getElementById('edit-notes').placeholder = 'e.g. ate lunch, walked, scrolled, called someone...';
+  document.getElementById('edit-notes').value = day.breakNotes[bkey] || '';
+  document.getElementById('edit-delete').style.display = 'none';
+  document.getElementById('edit-modal').classList.add('show');
+  setTimeout(() => document.getElementById('edit-notes').focus(), 50);
+}
+
+function updateDifficultyPicker() {
+  document.querySelectorAll('#difficulty-picker button').forEach(btn => {
+    btn.classList.toggle('selected', String(selectedDifficulty) === btn.getAttribute('data-diff'));
+  });
+}
+
 function closeEditModal() {
   document.getElementById('edit-modal').classList.remove('show');
-  editingSession = null;
+  editingTarget = null;
+  selectedDifficulty = null;
 }
 
 function saveEdit() {
-  if (!editingSession) return;
-  const day = data.days[editingSession.dayKey];
-  const s = day.sessions.find(s => s.id === editingSession.id);
-  if (!s) return;
-  const startStr = document.getElementById('edit-start').value;
-  const endStr = document.getElementById('edit-end').value;
-  if (!startStr || !endStr) {
-    alert('Both start and end times required.');
-    return;
+  if (!editingTarget) return;
+  if (editingTarget.type === 'session') {
+    const day = data.days[editingTarget.dayKey];
+    const s = day.sessions.find(s => s.id === editingTarget.id);
+    if (!s) return;
+    if (!editingTarget.isStopping) {
+      const startStr = document.getElementById('edit-start').value;
+      const endStr = document.getElementById('edit-end').value;
+      if (!startStr || !endStr) {
+        alert('Both start and end times required.');
+        return;
+      }
+      const newStart = timeInputToIso(startStr, editingTarget.dayKey);
+      const newEnd = timeInputToIso(endStr, editingTarget.dayKey);
+      if (new Date(newEnd) <= new Date(newStart)) {
+        alert('End must be after start.');
+        return;
+      }
+      // Check for overlap with other sessions on the same day
+      const newStartMs = new Date(newStart).getTime();
+      const newEndMs = new Date(newEnd).getTime();
+      const others = day.sessions.filter(o => o.id !== s.id && o.end);
+      const overlap = others.find(o => {
+        const oStart = new Date(o.start).getTime();
+        const oEnd = new Date(o.end).getTime();
+        return newStartMs < oEnd && newEndMs > oStart;
+      });
+      if (overlap) {
+        alert(`This session overlaps with another session (${formatTimeOfDay(overlap.start)} – ${formatTimeOfDay(overlap.end)}). Adjust the times.`);
+        return;
+      }
+      s.start = newStart;
+      s.end = newEnd;
+    }
+    s.notes = document.getElementById('edit-notes').value;
+    s.difficulty = selectedDifficulty;
+  } else if (editingTarget.type === 'break') {
+    const day = getDay(editingTarget.dayKey);
+    const note = document.getElementById('edit-notes').value;
+    if (note.trim()) {
+      day.breakNotes[editingTarget.id] = note;
+    } else {
+      delete day.breakNotes[editingTarget.id];
+    }
   }
-  const newStart = timeInputToIso(startStr, editingSession.dayKey);
-  const newEnd = timeInputToIso(endStr, editingSession.dayKey);
-  if (new Date(newEnd) <= new Date(newStart)) {
-    alert('End must be after start.');
-    return;
-  }
-  s.start = newStart;
-  s.end = newEnd;
   saveData(data);
   closeEditModal();
   render();
 }
 
 function deleteSession() {
-  if (!editingSession) return;
+  if (!editingTarget || editingTarget.type !== 'session') return;
   if (!confirm('Delete this session?')) return;
-  const day = data.days[editingSession.dayKey];
-  day.sessions = day.sessions.filter(s => s.id !== editingSession.id);
+  const day = data.days[editingTarget.dayKey];
+  day.sessions = day.sessions.filter(s => s.id !== editingTarget.id);
   saveData(data);
   closeEditModal();
   render();
@@ -1365,8 +1591,6 @@ function updateGoal(field, value) {
   const num = parseFloat(value);
   day.goals[field] = isNaN(num) ? 0 : num;
   saveData(data);
-  // Don't full re-render to avoid losing focus on input
-  // Just update progress text
   renderDay();
 }
 
@@ -1376,11 +1600,15 @@ function updateWake(value) {
   saveData(data);
 }
 
-// ===== Wake-up auto-prompt =====
+function updateAfterDaNotes(value) {
+  const day = getDay(viewingDate);
+  day.afterDaNotes = value;
+  saveData(data);
+}
+
 function checkWakePrompt() {
   const today = todayKey();
   const day = data.days[today];
-  // Prompt if we have prior days but today has no wake time set yet
   const priorDays = Object.keys(data.days).filter(k => k < today);
   if (priorDays.length > 0 && (!day || !day.wakeTime)) {
     const now = new Date();
@@ -1391,15 +1619,121 @@ function checkWakePrompt() {
   }
 }
 
-// ===== Print =====
 function printRange(range) {
-  // For simplicity: hide things that shouldn't print, then window.print()
-  // We rely on existing day view for "day". For week/month, render a summary view temporarily.
   if (range === 'day') {
-    window.print();
+    printSingleDay(viewingDate);
     return;
   }
   printSummary(range);
+}
+
+function buildSessionRowsHtml(dateKeyStr) {
+  const all = collectAllSessionsTouchingDate(dateKeyStr);
+  const clipped = splitSessionsAtMidnight(all, dateKeyStr);
+  const sorted = [...clipped].sort((a, b) => new Date(a.start) - new Date(b.start));
+  const day = data.days[dateKeyStr];
+  if (sorted.length === 0) return '<div style="color:#888; font-style:italic;">No sessions.</div>';
+  let html = '';
+  for (let i = 0; i < sorted.length; i++) {
+    const s = sorted[i];
+    const start = new Date(s.start);
+    const end = s.end ? new Date(s.end) : new Date();
+    const dur = end - start;
+    const diff = s.difficulty ? ` · D${s.difficulty}` : '';
+    html += `
+      <div style="border-bottom:1px solid #eee; padding:8px 0;">
+        <div style="display:flex; gap:12px; align-items:baseline;">
+          <strong style="font-family:Helvetica,Arial,sans-serif;">${formatTimeOfDay(s.start)} – ${s.end ? formatTimeOfDay(s.end) : '<em>active</em>'}</strong>
+          <span style="font-family:Helvetica,Arial,sans-serif; font-weight:700;">${formatDurationShort(dur)}</span>
+          <span style="color:#666; font-size:11px;">${diff}</span>
+        </div>
+        ${s.notes ? `<div style="margin-top:4px; padding:6px 8px; background:#f7f7f7; border-radius:3px; font-size:11px; white-space:pre-wrap;">${escapeHtml(s.notes)}</div>` : ''}
+      </div>
+    `;
+    if (i < sorted.length - 1 && day) {
+      const next = sorted[i + 1];
+      const gap = new Date(next.start) - new Date(s.end || s.start);
+      if (gap > 0 && s.end) {
+        const bk = breakKey(s.id, next.id);
+        const bnote = day.breakNotes && day.breakNotes[bk];
+        html += `
+          <div style="background:#f7f7f7; padding:6px 12px; font-size:11px; color:#666;">
+            <strong>Break · ${formatDurationShort(gap)}</strong>
+            ${bnote ? `<div style="margin-top:3px; color:#333; white-space:pre-wrap;">${escapeHtml(bnote)}</div>` : ''}
+          </div>
+        `;
+      }
+    }
+  }
+  return html;
+}
+
+function printSingleDay(dateKeyStr) {
+  const d = data.days[dateKeyStr];
+  const all = collectAllSessionsTouchingDate(dateKeyStr);
+  const clipped = splitSessionsAtMidnight(all, dateKeyStr);
+  const breaks = computeBreaks(clipped);
+  const daMs = totalDaMs(clipped);
+  const breakMs = totalBreakMs(breaks);
+  const goals = d ? d.goals : { daHours: 0, breakTotalHours: 0, breakPerMin: 0 };
+
+  const win = window.open('', '_blank');
+  win.document.write(`
+    <!DOCTYPE html><html><head><title>${formatDate(dateKeyStr)} — DA Tracker</title>
+    <style>
+      @page { margin: 0.5in; size: letter; }
+      body { font-family: -apple-system, sans-serif; color: #111; margin: 0; padding: 24px; font-size: 12px; line-height: 1.5; }
+      h1, h2 { font-family: Helvetica, Arial, sans-serif; }
+      h1 { margin: 0 0 4px; font-size: 22px; }
+      h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin: 24px 0 8px; }
+      .sub { color: #666; margin-bottom: 20px; font-size: 13px; }
+      .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+      .card { border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
+      .label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.1em; font-family: Helvetica, Arial, sans-serif; }
+      .value { font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 18px; margin-top: 4px; }
+      .meta { color: #666; font-size: 11px; }
+      .notes-block { padding: 10px; background: #f7f7f7; border-radius: 4px; white-space: pre-wrap; font-size: 12px; }
+    </style></head><body>
+    <h1>DA Tracker — Daily</h1>
+    <div class="sub">${formatDate(dateKeyStr)}</div>
+    <div class="grid">
+      <div class="card">
+        <div class="label">Wake-Up</div>
+        <div class="value">${(d && d.wakeTime) || '—'}</div>
+      </div>
+      <div class="card">
+        <div class="label">DA Time</div>
+        <div class="value">${formatDurationShort(daMs)}</div>
+        <div class="meta">Goal: ${goals.daHours || 0}h</div>
+      </div>
+      <div class="card">
+        <div class="label">Total Breaks</div>
+        <div class="value">${formatDurationShort(breakMs)}</div>
+        <div class="meta">Goal: ${goals.breakTotalHours || 0}h · Per: ${goals.breakPerMin || 0}m</div>
+      </div>
+      <div class="card">
+        <div class="label">Sessions</div>
+        <div class="value">${clipped.length}</div>
+      </div>
+      <div class="card">
+        <div class="label">Distractions</div>
+        <div class="value">${(d && d.distractions) || 0}</div>
+      </div>
+      <div class="card">
+        <div class="label">Day Status</div>
+        <div class="value">${d && d.ended ? 'Ended' : 'Open'}</div>
+      </div>
+    </div>
+    <h2>Sessions &amp; Breaks</h2>
+    ${buildSessionRowsHtml(dateKeyStr)}
+    ${(d && d.afterDaNotes && d.afterDaNotes.trim()) ? `
+      <h2>After DA</h2>
+      <div class="notes-block">${escapeHtml(d.afterDaNotes)}</div>
+    ` : ''}
+    <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
+    </body></html>
+  `);
+  win.document.close();
 }
 
 function printSummary(range) {
@@ -1423,14 +1757,16 @@ function printSummary(range) {
 
   let totalDa = 0, totalBreak = 0, totalDist = 0, sessions = 0, daysWithData = 0;
   let longest = 0, longestDate = '';
+  let difficulties = [];
   const rows = [];
+  const dayDetails = [];
   for (const k of keys) {
     if (!data.days[k]) continue;
     daysWithData++;
     const all = collectAllSessionsTouchingDate(k);
     const clipped = splitSessionsAtMidnight(all, k);
     const daMs = totalDaMs(clipped);
-    const breaks = computeBreaks(clipped, data.days[k].ended);
+    const breaks = computeBreaks(clipped);
     const breakMs = totalBreakMs(breaks);
     totalDa += daMs;
     totalBreak += breakMs;
@@ -1439,6 +1775,7 @@ function printSummary(range) {
     for (const s of clipped) {
       const dur = (s.end ? new Date(s.end) : new Date()) - new Date(s.start);
       if (dur > longest) { longest = dur; longestDate = k; }
+      if (s.difficulty) difficulties.push(s.difficulty);
     }
     rows.push({
       key: k,
@@ -1448,24 +1785,46 @@ function printSummary(range) {
       sessions: clipped.length,
       distractions: data.days[k].distractions || 0
     });
+    dayDetails.push(k);
   }
 
   const avgDa = daysWithData ? totalDa / daysWithData : 0;
+  const avgDifficulty = difficulties.length ? (difficulties.reduce((a,b)=>a+b,0) / difficulties.length).toFixed(1) : '—';
+
+  const detailHtml = dayDetails.map(k => {
+    const d = data.days[k];
+    return `
+      <div style="margin-top: 24px; padding-top: 12px; border-top: 2px solid #ddd; page-break-inside: avoid;">
+        <h3 style="font-family:Helvetica,Arial,sans-serif; margin: 0 0 6px; font-size:14px;">${formatDate(k)}</h3>
+        <div style="font-size:11px; color:#666; margin-bottom:8px;">
+          Wake: ${d.wakeTime || '—'} · Distractions: ${d.distractions || 0}
+        </div>
+        ${buildSessionRowsHtml(k)}
+        ${d.afterDaNotes && d.afterDaNotes.trim() ? `
+          <div style="margin-top: 10px;">
+            <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#888; font-family:Helvetica,Arial,sans-serif; font-weight:700; margin-bottom:4px;">After DA</div>
+            <div style="padding:8px; background:#f7f7f7; border-radius:3px; font-size:11px; white-space:pre-wrap;">${escapeHtml(d.afterDaNotes)}</div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
 
   const win = window.open('', '_blank');
   win.document.write(`
     <!DOCTYPE html><html><head><title>${label} — DA Tracker</title>
     <style>
       @page { margin: 0.5in; size: letter; }
-      body { font-family: -apple-system, sans-serif; color: #111; margin: 0; padding: 24px; font-size: 12px; }
-      h1, h2 { font-family: Helvetica, Arial, sans-serif; }
-      h1 { margin: 0 0 4px; font-size: 20px; }
-      .sub { color: #666; margin-bottom: 20px; }
-      .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; }
+      body { font-family: -apple-system, sans-serif; color: #111; margin: 0; padding: 24px; font-size: 12px; line-height: 1.5; }
+      h1, h2, h3 { font-family: Helvetica, Arial, sans-serif; }
+      h1 { margin: 0 0 4px; font-size: 22px; }
+      h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; color: #888; margin: 24px 0 8px; }
+      .sub { color: #666; margin-bottom: 20px; font-size: 13px; }
+      .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
       .card { border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
       .label { font-size: 10px; text-transform: uppercase; color: #888; letter-spacing: 0.1em; font-family: Helvetica, Arial, sans-serif; }
       .value { font-family: Helvetica, Arial, sans-serif; font-weight: 700; font-size: 18px; margin-top: 4px; }
-      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 16px; }
       th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #eee; }
       th { font-family: Helvetica, Arial, sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #888; }
     </style></head><body>
@@ -1478,10 +1837,10 @@ function printSummary(range) {
       <div class="card"><div class="label">Sessions</div><div class="value">${sessions}</div></div>
       <div class="card"><div class="label">Distractions</div><div class="value">${totalDist}</div></div>
       <div class="card"><div class="label">Longest Session</div><div class="value">${formatDurationShort(longest)}</div></div>
-      <div class="card"><div class="label">Days Tracked</div><div class="value">${daysWithData}</div></div>
-      <div class="card"><div class="label">Days in Range</div><div class="value">${keys.length}</div></div>
+      <div class="card"><div class="label">Avg Difficulty</div><div class="value">${avgDifficulty}</div></div>
+      <div class="card"><div class="label">Days Tracked</div><div class="value">${daysWithData} / ${keys.length}</div></div>
     </div>
-    <h2 style="font-size:13px;margin-bottom:8px;">Daily Breakdown</h2>
+    <h2>Daily Breakdown</h2>
     <table>
       <thead><tr><th>Date</th><th>Wake</th><th>DA</th><th>Breaks</th><th>Sessions</th><th>Distractions</th></tr></thead>
       <tbody>
@@ -1495,13 +1854,14 @@ function printSummary(range) {
         </tr>`).join('')}
       </tbody>
     </table>
+    <h2>Session &amp; Break Details</h2>
+    ${detailHtml || '<div style="color:#888; font-style:italic;">No sessions in this range.</div>'}
     <script>window.onload = () => setTimeout(() => window.print(), 300);<\/script>
     </body></html>
   `);
   win.document.close();
 }
 
-// ===== Export / Import / Clear =====
 function exportJson() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1538,7 +1898,6 @@ function clearAll() {
   render();
 }
 
-// ===== Wire up =====
 document.getElementById('prev-day').addEventListener('click', () => {
   viewingDate = shiftKey(viewingDate, -1);
   render();
@@ -1562,20 +1921,22 @@ document.getElementById('back-day-btn').addEventListener('click', () => {
 });
 
 document.getElementById('timer-btn').addEventListener('click', () => {
-  const day = getDay(viewingDate);
-  // Only allow start/stop on today
-  if (viewingDate !== todayKey()) {
+  if (viewingDate !== todayKey() && !findActiveAnywhere()) {
     if (!confirm('You are viewing a past/future day. Jump to today to start a session?')) return;
     viewingDate = todayKey();
     render();
     return;
   }
-  if (getActiveSession(day)) {
+  if (findActiveAnywhere()) {
     stopSession();
   } else {
     startSession();
   }
 });
+
+document.getElementById('cancel-btn').addEventListener('click', cancelSession);
+
+document.getElementById('add-session-btn').addEventListener('click', addManualSession);
 
 document.getElementById('dist-plus').addEventListener('click', () => addDistraction(1));
 document.getElementById('dist-minus').addEventListener('click', () => addDistraction(-1));
@@ -1592,9 +1953,19 @@ document.getElementById('goal-da').addEventListener('change', e => updateGoal('d
 document.getElementById('goal-break-total').addEventListener('change', e => updateGoal('breakTotalHours', e.target.value));
 document.getElementById('goal-break-per').addEventListener('change', e => updateGoal('breakPerMin', e.target.value));
 
+document.getElementById('after-da-notes').addEventListener('input', e => updateAfterDaNotes(e.target.value));
+
 document.getElementById('edit-cancel').addEventListener('click', closeEditModal);
 document.getElementById('edit-save').addEventListener('click', saveEdit);
 document.getElementById('edit-delete').addEventListener('click', deleteSession);
+
+document.querySelectorAll('#difficulty-picker button').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const v = parseInt(btn.getAttribute('data-diff'));
+    selectedDifficulty = selectedDifficulty === v ? null : v;
+    updateDifficultyPicker();
+  });
+});
 
 document.getElementById('wake-modal-save').addEventListener('click', () => {
   const val = document.getElementById('wake-modal-input').value;
@@ -1621,30 +1992,20 @@ document.getElementById('import-file').addEventListener('change', e => {
 });
 document.getElementById('clear-btn').addEventListener('click', clearAll);
 
-// Close print menu when clicking outside
 document.addEventListener('click', (e) => {
   document.querySelectorAll('details.print-menu').forEach(d => {
     if (!d.contains(e.target)) d.open = false;
   });
 });
 
-// ===== Init =====
 checkWakePrompt();
 render();
 
-// Keep timer ticking even if user navigates between views
 setInterval(() => {
   if (currentView === 'day') {
-    // Lightweight: only update timer if active
-    let hasActive = false;
-    for (const k of Object.keys(data.days)) {
-      if (getActiveSession(data.days[k])) { hasActive = true; break; }
-    }
-    // If no active timer interval running but should be, re-render
-    if (hasActive && !activeTimerInterval) renderDay();
+    if (findActiveAnywhere() && !activeTimerInterval) renderDay();
   }
 }, 30000);
-
 </script>
 </body>
 </html>

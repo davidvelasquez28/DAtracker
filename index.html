@@ -2299,6 +2299,7 @@ function importJson(file) {
       const imported = JSON.parse(e.target.result);
       if (!imported.days) throw new Error('Invalid format');
       if (!imported.prompts) imported.prompts = [];
+      if (!imported.systems) imported.systems = [];
       if (!confirm('This will replace all current data. Continue?')) return;
       data = imported;
       saveData(data);
@@ -2313,7 +2314,7 @@ function importJson(file) {
 function clearAll() {
   if (!confirm('Delete all tracking data? This cannot be undone.')) return;
   if (!confirm('Are you sure? This is permanent.')) return;
-  data = { days: {}, prompts: [] };
+  data = { days: {}, prompts: [], systems: [] };
   saveData(data);
   viewingDate = todayKey();
   render();
@@ -2349,6 +2350,20 @@ document.getElementById('prompt-delete').addEventListener('click', deletePrompt)
 document.getElementById('prompts-search').addEventListener('input', e => {
   promptSearchTerm = e.target.value;
   renderPromptsList();
+});
+
+document.getElementById('systems-btn').addEventListener('click', openSystemsModal);
+document.getElementById('systems-close').addEventListener('click', closeSystemsModal);
+document.getElementById('systems-add-btn').addEventListener('click', () => openSystemEdit('new'));
+document.getElementById('system-cancel').addEventListener('click', () => {
+  document.getElementById('system-edit-form').style.display = 'none';
+  editingSystemId = null;
+});
+document.getElementById('system-save').addEventListener('click', saveSystem);
+document.getElementById('system-delete').addEventListener('click', deleteSystem);
+document.getElementById('systems-search').addEventListener('input', e => {
+  systemSearchTerm = e.target.value;
+  renderSystemsList();
 });
 document.getElementById('back-day-btn').addEventListener('click', () => {
   currentView = 'day';

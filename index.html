@@ -686,6 +686,7 @@
         <button id="today-btn">Today</button>
         <button id="history-btn">History</button>
         <button id="prompts-btn">Prompts</button>
+        <button id="systems-btn">DA Systems</button>
         <details class="print-menu">
           <summary>Print ▾</summary>
           <div class="print-dropdown">
@@ -868,18 +869,49 @@
   </div>
 </div>
 
+<div class="modal-bg" id="systems-modal">
+  <div class="modal" style="max-width: 640px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <h3 style="margin:0;">DA Systems</h3>
+      <button id="systems-close" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--muted); line-height:1;">×</button>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <input type="text" id="systems-search" placeholder="Search systems..." style="flex:1; border:1px solid var(--line); padding:8px; border-radius:4px; font-size:14px; font-family:inherit;">
+      <button id="systems-add-btn" class="primary" style="background:var(--fg); color:var(--bg); border:1px solid var(--fg); padding:8px 14px; border-radius:4px; cursor:pointer; font-family:Helvetica,Arial,sans-serif; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">+ New</button>
+    </div>
+    <div id="systems-list" style="max-height: 50vh; overflow-y: auto;"></div>
+
+    <div id="system-edit-form" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
+      <div class="modal-row">
+        <label>Title</label>
+        <input type="text" id="system-title" placeholder="e.g. Multi-turn evaluation framework">
+      </div>
+      <div class="modal-row">
+        <label>System</label>
+        <textarea id="system-body" placeholder="Write your framework here..." style="min-height:140px;"></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button class="danger" id="system-delete">Delete</button>
+        <button id="system-cancel">Cancel</button>
+        <button class="primary" id="system-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const STORAGE_KEY = 'da-tracker-v1';
 
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { days: {}, prompts: [] };
+    if (!raw) return { days: {}, prompts: [], systems: [] };
     const parsed = JSON.parse(raw);
     if (!parsed.prompts) parsed.prompts = [];
+    if (!parsed.systems) parsed.systems = [];
     return parsed;
   } catch (e) {
-    return { days: {}, prompts: [] };
+    return { days: {}, prompts: [], systems: [] };
   }
 }
 
@@ -2112,6 +2144,142 @@ function deletePrompt() {
   document.getElementById('prompt-edit-form').style.display = 'none';
   editingPromptId = null;
   renderPromptsList();
+}
+
+// ===== DA Systems =====
+let editingSystemId = null;
+let systemSearchTerm = '';
+
+function openSystemsModal() {
+  systemSearchTerm = '';
+  document.getElementById('systems-search').value = '';
+  document.getElementById('system-edit-form').style.display = 'none';
+  editingSystemId = null;
+  renderSystemsList();
+  document.getElementById('systems-modal').classList.add('show');
+}
+
+function closeSystemsModal() {
+  document.getElementById('systems-modal').classList.remove('show');
+  editingSystemId = null;
+}
+
+function renderSystemsList() {
+  const list = document.getElementById('systems-list');
+  const term = systemSearchTerm.toLowerCase().trim();
+  const filtered = (data.systems || []).filter(s => {
+    if (!term) return true;
+    return (s.title || '').toLowerCase().includes(term) ||
+           (s.body || '').toLowerCase().includes(term);
+  });
+
+  if (filtered.length === 0) {
+    if ((data.systems || []).length === 0) {
+      list.innerHTML = '<div class="empty-state">No systems saved yet. Click + New to add one.</div>';
+    } else {
+      list.innerHTML = '<div class="empty-state">No systems match your search.</div>';
+    }
+    return;
+  }
+
+  list.innerHTML = filtered.map(s => `
+    <div class="prompt-item" data-id="${s.id}">
+      <div class="prompt-item-header">
+        <div class="prompt-title">${escapeHtml(s.title || 'Untitled')}</div>
+        <div class="prompt-actions">
+          <button class="copy-btn" data-copy-system="${s.id}">Copy</button>
+          <button data-edit-system="${s.id}" title="Edit">✎</button>
+        </div>
+      </div>
+      <div class="prompt-body-preview" data-toggle-system="${s.id}">${escapeHtml(s.body || '')}</div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('[data-copy-system]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      copySystem(btn.getAttribute('data-copy-system'), btn);
+    });
+  });
+  list.querySelectorAll('[data-edit-system]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openSystemEdit(btn.getAttribute('data-edit-system'));
+    });
+  });
+  list.querySelectorAll('[data-toggle-system]').forEach(el => {
+    el.addEventListener('click', () => el.classList.toggle('expanded'));
+  });
+}
+
+function copySystem(id, btn) {
+  const s = data.systems.find(s => s.id === id);
+  if (!s) return;
+  const text = s.body || '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => showCopied(btn));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showCopied(btn); }
+    catch (e) { alert('Copy failed.'); }
+    document.body.removeChild(ta);
+  }
+}
+
+function openSystemEdit(id) {
+  editingSystemId = id;
+  const form = document.getElementById('system-edit-form');
+  form.style.display = 'block';
+  if (id === 'new') {
+    document.getElementById('system-title').value = '';
+    document.getElementById('system-body').value = '';
+    document.getElementById('system-delete').style.display = 'none';
+  } else {
+    const s = data.systems.find(s => s.id === id);
+    if (!s) return;
+    document.getElementById('system-title').value = s.title || '';
+    document.getElementById('system-body').value = s.body || '';
+    document.getElementById('system-delete').style.display = 'inline-block';
+  }
+  setTimeout(() => document.getElementById('system-title').focus(), 50);
+  form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function saveSystem() {
+  const title = document.getElementById('system-title').value.trim();
+  const body = document.getElementById('system-body').value;
+  if (!title && !body.trim()) {
+    alert('Add a title or system body.');
+    return;
+  }
+  if (!data.systems) data.systems = [];
+  if (editingSystemId === 'new') {
+    const id = 'sys_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    data.systems.push({ id, title: title || 'Untitled', body });
+  } else {
+    const s = data.systems.find(s => s.id === editingSystemId);
+    if (s) {
+      s.title = title || 'Untitled';
+      s.body = body;
+    }
+  }
+  saveData(data);
+  document.getElementById('system-edit-form').style.display = 'none';
+  editingSystemId = null;
+  renderSystemsList();
+}
+
+function deleteSystem() {
+  if (!editingSystemId || editingSystemId === 'new') return;
+  if (!confirm('Delete this system?')) return;
+  data.systems = data.systems.filter(s => s.id !== editingSystemId);
+  saveData(data);
+  document.getElementById('system-edit-form').style.display = 'none';
+  editingSystemId = null;
+  renderSystemsList();
 }
 
 function exportJson() {

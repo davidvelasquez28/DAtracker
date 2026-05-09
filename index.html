@@ -591,6 +591,77 @@
   }
   .data-controls button:hover { background: var(--soft); }
 
+  .prompt-item {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 8px;
+  }
+  .prompt-item-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .prompt-title {
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    font-size: 14px;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .prompt-actions {
+    display: flex;
+    gap: 4px;
+  }
+  .prompt-actions button {
+    background: none;
+    border: 1px solid var(--line);
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+  }
+  .prompt-actions button:hover { background: var(--soft); }
+  .prompt-actions .copy-btn {
+    background: var(--fg);
+    color: var(--bg);
+    border-color: var(--fg);
+    font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .prompt-actions .copy-btn.copied {
+    background: #16a34a;
+    border-color: #16a34a;
+  }
+  .prompt-body-preview {
+    font-size: 12px;
+    color: var(--muted);
+    white-space: pre-wrap;
+    max-height: 60px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+  }
+  .prompt-body-preview.expanded {
+    max-height: none;
+  }
+  .prompt-body-preview:not(.expanded)::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: linear-gradient(transparent, var(--bg));
+  }
+
   @media (max-width: 600px) {
     .goals { grid-template-columns: 1fr; }
     .stat-grid { grid-template-columns: 1fr; }
@@ -614,6 +685,7 @@
       <div class="actions">
         <button id="today-btn">Today</button>
         <button id="history-btn">History</button>
+        <button id="prompts-btn">Prompts</button>
         <details class="print-menu">
           <summary>Print ▾</summary>
           <div class="print-dropdown">
@@ -766,16 +838,48 @@
   </div>
 </div>
 
+<div class="modal-bg" id="prompts-modal">
+  <div class="modal" style="max-width: 640px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+      <h3 style="margin:0;">Prompts</h3>
+      <button id="prompts-close" style="background:none; border:none; font-size:22px; cursor:pointer; color:var(--muted); line-height:1;">×</button>
+    </div>
+    <div style="display:flex; gap:8px; margin-bottom:12px;">
+      <input type="text" id="prompts-search" placeholder="Search prompts..." style="flex:1; border:1px solid var(--line); padding:8px; border-radius:4px; font-size:14px; font-family:inherit;">
+      <button id="prompts-add-btn" class="primary" style="background:var(--fg); color:var(--bg); border:1px solid var(--fg); padding:8px 14px; border-radius:4px; cursor:pointer; font-family:Helvetica,Arial,sans-serif; font-weight:700; font-size:13px; text-transform:uppercase; letter-spacing:0.05em;">+ New</button>
+    </div>
+    <div id="prompts-list" style="max-height: 50vh; overflow-y: auto;"></div>
+
+    <div id="prompt-edit-form" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--line);">
+      <div class="modal-row">
+        <label>Title</label>
+        <input type="text" id="prompt-title" placeholder="e.g. Rewrite for clarity">
+      </div>
+      <div class="modal-row">
+        <label>Prompt</label>
+        <textarea id="prompt-body" placeholder="Paste or type the prompt here..." style="min-height:140px;"></textarea>
+      </div>
+      <div class="modal-buttons">
+        <button class="danger" id="prompt-delete">Delete</button>
+        <button id="prompt-cancel">Cancel</button>
+        <button class="primary" id="prompt-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const STORAGE_KEY = 'da-tracker-v1';
 
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { days: {} };
-    return JSON.parse(raw);
+    if (!raw) return { days: {}, prompts: [] };
+    const parsed = JSON.parse(raw);
+    if (!parsed.prompts) parsed.prompts = [];
+    return parsed;
   } catch (e) {
-    return { days: {} };
+    return { days: {}, prompts: [] };
   }
 }
 
@@ -1862,6 +1966,154 @@ function printSummary(range) {
   win.document.close();
 }
 
+// ===== Prompts =====
+let editingPromptId = null;
+let promptSearchTerm = '';
+
+function openPromptsModal() {
+  promptSearchTerm = '';
+  document.getElementById('prompts-search').value = '';
+  document.getElementById('prompt-edit-form').style.display = 'none';
+  editingPromptId = null;
+  renderPromptsList();
+  document.getElementById('prompts-modal').classList.add('show');
+}
+
+function closePromptsModal() {
+  document.getElementById('prompts-modal').classList.remove('show');
+  editingPromptId = null;
+}
+
+function renderPromptsList() {
+  const list = document.getElementById('prompts-list');
+  const term = promptSearchTerm.toLowerCase().trim();
+  const filtered = (data.prompts || []).filter(p => {
+    if (!term) return true;
+    return (p.title || '').toLowerCase().includes(term) ||
+           (p.body || '').toLowerCase().includes(term);
+  });
+
+  if (filtered.length === 0) {
+    if ((data.prompts || []).length === 0) {
+      list.innerHTML = '<div class="empty-state">No prompts saved yet. Click + New to add one.</div>';
+    } else {
+      list.innerHTML = '<div class="empty-state">No prompts match your search.</div>';
+    }
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => `
+    <div class="prompt-item" data-id="${p.id}">
+      <div class="prompt-item-header">
+        <div class="prompt-title">${escapeHtml(p.title || 'Untitled')}</div>
+        <div class="prompt-actions">
+          <button class="copy-btn" data-copy="${p.id}">Copy</button>
+          <button data-edit-prompt="${p.id}" title="Edit">✎</button>
+        </div>
+      </div>
+      <div class="prompt-body-preview" data-toggle="${p.id}">${escapeHtml(p.body || '')}</div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('[data-copy]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      copyPrompt(btn.getAttribute('data-copy'), btn);
+    });
+  });
+  list.querySelectorAll('[data-edit-prompt]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openPromptEdit(btn.getAttribute('data-edit-prompt'));
+    });
+  });
+  list.querySelectorAll('[data-toggle]').forEach(el => {
+    el.addEventListener('click', () => el.classList.toggle('expanded'));
+  });
+}
+
+function copyPrompt(id, btn) {
+  const p = data.prompts.find(p => p.id === id);
+  if (!p) return;
+  const text = p.body || '';
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => showCopied(btn));
+  } else {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); showCopied(btn); }
+    catch (e) { alert('Copy failed.'); }
+    document.body.removeChild(ta);
+  }
+}
+
+function showCopied(btn) {
+  const original = btn.textContent;
+  btn.textContent = 'Copied';
+  btn.classList.add('copied');
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.classList.remove('copied');
+  }, 1200);
+}
+
+function openPromptEdit(id) {
+  editingPromptId = id;
+  const form = document.getElementById('prompt-edit-form');
+  form.style.display = 'block';
+  if (id === 'new') {
+    document.getElementById('prompt-title').value = '';
+    document.getElementById('prompt-body').value = '';
+    document.getElementById('prompt-delete').style.display = 'none';
+  } else {
+    const p = data.prompts.find(p => p.id === id);
+    if (!p) return;
+    document.getElementById('prompt-title').value = p.title || '';
+    document.getElementById('prompt-body').value = p.body || '';
+    document.getElementById('prompt-delete').style.display = 'inline-block';
+  }
+  setTimeout(() => document.getElementById('prompt-title').focus(), 50);
+  // Scroll form into view
+  form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function savePrompt() {
+  const title = document.getElementById('prompt-title').value.trim();
+  const body = document.getElementById('prompt-body').value;
+  if (!title && !body.trim()) {
+    alert('Add a title or prompt body.');
+    return;
+  }
+  if (!data.prompts) data.prompts = [];
+  if (editingPromptId === 'new') {
+    const id = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+    data.prompts.push({ id, title: title || 'Untitled', body });
+  } else {
+    const p = data.prompts.find(p => p.id === editingPromptId);
+    if (p) {
+      p.title = title || 'Untitled';
+      p.body = body;
+    }
+  }
+  saveData(data);
+  document.getElementById('prompt-edit-form').style.display = 'none';
+  editingPromptId = null;
+  renderPromptsList();
+}
+
+function deletePrompt() {
+  if (!editingPromptId || editingPromptId === 'new') return;
+  if (!confirm('Delete this prompt?')) return;
+  data.prompts = data.prompts.filter(p => p.id !== editingPromptId);
+  saveData(data);
+  document.getElementById('prompt-edit-form').style.display = 'none';
+  editingPromptId = null;
+  renderPromptsList();
+}
+
 function exportJson() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -1878,6 +2130,7 @@ function importJson(file) {
     try {
       const imported = JSON.parse(e.target.result);
       if (!imported.days) throw new Error('Invalid format');
+      if (!imported.prompts) imported.prompts = [];
       if (!confirm('This will replace all current data. Continue?')) return;
       data = imported;
       saveData(data);
@@ -1892,7 +2145,7 @@ function importJson(file) {
 function clearAll() {
   if (!confirm('Delete all tracking data? This cannot be undone.')) return;
   if (!confirm('Are you sure? This is permanent.')) return;
-  data = { days: {} };
+  data = { days: {}, prompts: [] };
   saveData(data);
   viewingDate = todayKey();
   render();
@@ -1914,6 +2167,20 @@ document.getElementById('today-btn').addEventListener('click', () => {
 document.getElementById('history-btn').addEventListener('click', () => {
   currentView = 'history';
   render();
+});
+
+document.getElementById('prompts-btn').addEventListener('click', openPromptsModal);
+document.getElementById('prompts-close').addEventListener('click', closePromptsModal);
+document.getElementById('prompts-add-btn').addEventListener('click', () => openPromptEdit('new'));
+document.getElementById('prompt-cancel').addEventListener('click', () => {
+  document.getElementById('prompt-edit-form').style.display = 'none';
+  editingPromptId = null;
+});
+document.getElementById('prompt-save').addEventListener('click', savePrompt);
+document.getElementById('prompt-delete').addEventListener('click', deletePrompt);
+document.getElementById('prompts-search').addEventListener('input', e => {
+  promptSearchTerm = e.target.value;
+  renderPromptsList();
 });
 document.getElementById('back-day-btn').addEventListener('click', () => {
   currentView = 'day';

@@ -684,6 +684,7 @@
       </div>
       <div class="actions">
         <button id="today-btn">Today</button>
+        <button id="activities-btn">Activities</button>
         <button id="history-btn">History</button>
         <button id="prompts-btn">Prompts</button>
         <button id="systems-btn">DA Systems</button>
@@ -702,6 +703,8 @@
       <span class="wake-label">Wake up:</span>
       <input type="time" id="wake-input">
     </div>
+
+    <div id="day-activities-summary" style="display:none; margin-bottom:20px; padding:10px 12px; border:1px solid var(--line); border-radius:6px; font-size:13px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;"></div>
 
     <div class="section-title">Goals</div>
     <div class="goals">
@@ -789,6 +792,52 @@
       <button id="import-btn">Import JSON</button>
       <input type="file" id="import-file" accept="application/json" style="display:none;">
       <button id="clear-btn">Clear All Data</button>
+    </div>
+  </div>
+
+  <div id="activities-view" class="view">
+    <div class="topbar">
+      <div class="nav">
+        <button id="act-prev-day" title="Previous day">←</button>
+        <div class="date-label" id="act-date-label">—</div>
+        <button id="act-next-day" title="Next day">→</button>
+      </div>
+      <div class="actions">
+        <button id="act-back-btn">← Back to Day</button>
+        <button id="act-add-type">+ Add Activity</button>
+      </div>
+    </div>
+
+    <div id="activities-summary" style="margin-bottom:20px; padding:12px; border:1px solid var(--line); border-radius:6px; display:flex; flex-wrap:wrap; gap:18px; font-size:13px;"></div>
+
+    <div id="activities-container"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="add-activity-modal">
+  <div class="modal">
+    <h3>Add Activity Type</h3>
+    <div class="modal-row">
+      <label>Name</label>
+      <input type="text" id="add-activity-name" placeholder="e.g. Reading, Gym, Side Project">
+    </div>
+    <div class="modal-row">
+      <label>Type</label>
+      <select id="add-activity-mode" style="border:1px solid var(--line); padding:8px; border-radius:4px; font-size:14px; font-family:inherit;">
+        <option value="target">Positive (set a target — bar fills as you progress)</option>
+        <option value="limit">Negative (set a limit — bar turns red when exceeded)</option>
+      </select>
+    </div>
+    <div class="modal-row">
+      <label>Daily goal (hours, optional)</label>
+      <input type="number" id="add-activity-goal" min="0" step="0.25" placeholder="e.g. 2">
+    </div>
+    <div class="modal-row">
+      <label><input type="checkbox" id="add-activity-notes" checked> Allow session notes</label>
+    </div>
+    <div class="modal-buttons">
+      <button id="add-activity-cancel">Cancel</button>
+      <button class="primary" id="add-activity-save">Add</button>
     </div>
   </div>
 </div>
@@ -905,14 +954,25 @@ const STORAGE_KEY = 'da-tracker-v1';
 function loadData() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { days: {}, prompts: [], systems: [] };
+    if (!raw) return { days: {}, prompts: [], systems: [], activityTypes: defaultActivityTypes() };
     const parsed = JSON.parse(raw);
     if (!parsed.prompts) parsed.prompts = [];
     if (!parsed.systems) parsed.systems = [];
+    if (!parsed.activityTypes || parsed.activityTypes.length === 0) {
+      parsed.activityTypes = defaultActivityTypes();
+    }
     return parsed;
   } catch (e) {
-    return { days: {}, prompts: [], systems: [] };
+    return { days: {}, prompts: [], systems: [], activityTypes: defaultActivityTypes() };
   }
+}
+
+function defaultActivityTypes() {
+  return [
+    { id: 'social', name: 'Social Media', mode: 'limit', goalHours: 1, allowNotes: false, color: '#b91c1c' },
+    { id: 'learning', name: 'Learning', mode: 'target', goalHours: 1, allowNotes: true, color: '#2563eb' },
+    { id: 'building', name: 'Building Apps', mode: 'target', goalHours: 2, allowNotes: true, color: '#16a34a' }
+  ];
 }
 
 function saveData(data) {
@@ -968,12 +1028,14 @@ function getDay(key) {
       breakNotes: {},
       afterDaNotes: '',
       distractions: 0,
-      ended: false
+      ended: false,
+      activities: {} // { activityTypeId: [{id, start, end, notes}] }
     };
   }
   const d = data.days[key];
   if (!d.breakNotes) d.breakNotes = {};
   if (d.afterDaNotes === undefined) d.afterDaNotes = '';
+  if (!d.activities) d.activities = {};
   return d;
 }
 
@@ -1109,6 +1171,8 @@ function breakKey(prevId, nextId) {
 function render() {
   if (currentView === 'day') {
     renderDay();
+  } else if (currentView === 'activities') {
+    renderActivitiesView();
   } else {
     renderHistory();
   }
@@ -1117,10 +1181,14 @@ function render() {
 function renderDay() {
   document.getElementById('day-view').classList.add('active');
   document.getElementById('history-view').classList.remove('active');
+  const av = document.getElementById('activities-view');
+  if (av) av.classList.remove('active');
 
   document.getElementById('date-label').textContent = formatDate(viewingDate);
 
   const day = getDay(viewingDate);
+
+  renderDayActivitiesSummary(day);
 
   document.getElementById('wake-input').value = day.wakeTime || '';
   document.getElementById('goal-da').value = day.goals.daHours || '';
@@ -1306,6 +1374,8 @@ function renderSessionsList(sessions, breaks, day) {
 function renderHistory() {
   document.getElementById('day-view').classList.remove('active');
   document.getElementById('history-view').classList.add('active');
+  const av = document.getElementById('activities-view');
+  if (av) av.classList.remove('active');
 
   const days = Object.keys(data.days).sort();
   const stats = computeAggregateStats();
@@ -1473,6 +1543,11 @@ function startSession() {
   const day = getDay(viewingDate);
   if (day.ended) return;
   if (findActiveAnywhere()) return;
+  // Stop any active activity
+  const activeAct = getActiveActivity();
+  if (activeAct) {
+    stopActivity(activeAct.dayKey, activeAct.activityTypeId, activeAct.session.id);
+  }
   const id = 's_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
   day.sessions.push({ id, start: new Date().toISOString(), end: null, notes: '', difficulty: null });
   saveData(data);
@@ -1657,12 +1732,51 @@ function updateDifficultyPicker() {
 
 function closeEditModal() {
   document.getElementById('edit-modal').classList.remove('show');
+  document.getElementById('edit-notes').disabled = false;
   editingTarget = null;
   selectedDifficulty = null;
 }
 
 function saveEdit() {
   if (!editingTarget) return;
+  if (editingTarget.type === 'activity') {
+    const day = data.days[editingTarget.dayKey];
+    if (!day || !day.activities[editingTarget.activityTypeId]) return;
+    const s = day.activities[editingTarget.activityTypeId].find(s => s.id === editingTarget.id);
+    if (!s) return;
+    const startStr = document.getElementById('edit-start').value;
+    const endStr = document.getElementById('edit-end').value;
+    if (!startStr || !endStr) {
+      alert('Both start and end times required.');
+      return;
+    }
+    const newStart = timeInputToIso(startStr, editingTarget.dayKey);
+    const newEnd = timeInputToIso(endStr, editingTarget.dayKey);
+    if (new Date(newEnd) <= new Date(newStart)) {
+      alert('End must be after start.');
+      return;
+    }
+    // Overlap check within same activity type only
+    const newStartMs = new Date(newStart).getTime();
+    const newEndMs = new Date(newEnd).getTime();
+    const others = day.activities[editingTarget.activityTypeId].filter(o => o.id !== s.id && o.end);
+    const overlap = others.find(o => {
+      const oStart = new Date(o.start).getTime();
+      const oEnd = new Date(o.end).getTime();
+      return newStartMs < oEnd && newEndMs > oStart;
+    });
+    if (overlap) {
+      alert(`This overlaps with another session (${formatTimeOfDay(overlap.start)} – ${formatTimeOfDay(overlap.end)}).`);
+      return;
+    }
+    s.start = newStart;
+    s.end = newEnd;
+    s.notes = document.getElementById('edit-notes').value;
+    saveData(data);
+    closeEditModal();
+    render();
+    return;
+  }
   if (editingTarget.type === 'session') {
     const day = data.days[editingTarget.dayKey];
     const s = day.sessions.find(s => s.id === editingTarget.id);
@@ -1713,7 +1827,19 @@ function saveEdit() {
 }
 
 function deleteSession() {
-  if (!editingTarget || editingTarget.type !== 'session') return;
+  if (!editingTarget) return;
+  if (editingTarget.type === 'activity') {
+    if (!confirm('Delete this session?')) return;
+    const day = data.days[editingTarget.dayKey];
+    if (day && day.activities[editingTarget.activityTypeId]) {
+      day.activities[editingTarget.activityTypeId] = day.activities[editingTarget.activityTypeId].filter(s => s.id !== editingTarget.id);
+      saveData(data);
+    }
+    closeEditModal();
+    render();
+    return;
+  }
+  if (editingTarget.type !== 'session') return;
   if (!confirm('Delete this session?')) return;
   const day = data.days[editingTarget.dayKey];
   day.sessions = day.sessions.filter(s => s.id !== editingTarget.id);
@@ -1761,6 +1887,31 @@ function printRange(range) {
     return;
   }
   printSummary(range);
+}
+
+function buildActivityDetailsHtml(dateKeyStr) {
+  if (!data.activityTypes || data.activityTypes.length === 0) return '';
+  let html = '';
+  for (const type of data.activityTypes) {
+    const sessions = collectActivitySessionsForDate(type.id, dateKeyStr);
+    const sorted = [...sessions].sort((a, b) => new Date(a.start) - new Date(b.start));
+    if (sorted.length === 0) continue;
+    html += `<div style="margin-top:12px;"><strong style="font-family:Helvetica,Arial,sans-serif; font-size:12px;">${escapeHtml(type.name)}</strong>`;
+    for (const s of sorted) {
+      const start = new Date(s.start);
+      const end = s.end ? new Date(s.end) : new Date();
+      const dur = end - start;
+      html += `<div style="border-bottom:1px solid #eee; padding:6px 0;">
+        <div style="display:flex; gap:12px; align-items:baseline; font-size:11px;">
+          <span style="font-family:Helvetica,Arial,sans-serif;">${formatTimeOfDay(s.start)} – ${s.end ? formatTimeOfDay(s.end) : '<em>active</em>'}</span>
+          <span style="font-family:Helvetica,Arial,sans-serif; font-weight:700;">${formatDurationShort(dur)}</span>
+        </div>
+        ${s.notes ? `<div style="margin-top:3px; padding:4px 6px; background:#f7f7f7; border-radius:3px; font-size:10px; white-space:pre-wrap;">${escapeHtml(s.notes)}</div>` : ''}
+      </div>`;
+    }
+    html += `</div>`;
+  }
+  return html;
 }
 
 function buildSessionRowsHtml(dateKeyStr) {
@@ -1862,6 +2013,20 @@ function printSingleDay(dateKeyStr) {
     </div>
     <h2>Sessions &amp; Breaks</h2>
     ${buildSessionRowsHtml(dateKeyStr)}
+    ${(data.activityTypes && data.activityTypes.length > 0) ? `
+      <h2>Activities</h2>
+      <div class="grid" style="grid-template-columns:repeat(3,1fr);">
+        ${data.activityTypes.map(type => {
+          const ms = activityTotalMs(type.id, dateKeyStr);
+          return `<div class="card">
+            <div class="label">${escapeHtml(type.name)}</div>
+            <div class="value">${formatDurationShort(ms)}</div>
+            ${type.goalHours ? `<div class="meta">${type.mode === 'limit' ? 'Limit' : 'Goal'}: ${type.goalHours}h</div>` : ''}
+          </div>`;
+        }).join('')}
+      </div>
+      ${buildActivityDetailsHtml(dateKeyStr)}
+    ` : ''}
     ${(d && d.afterDaNotes && d.afterDaNotes.trim()) ? `
       <h2>After DA</h2>
       <div class="notes-block">${escapeHtml(d.afterDaNotes)}</div>
@@ -1894,6 +2059,8 @@ function printSummary(range) {
   let totalDa = 0, totalBreak = 0, totalDist = 0, sessions = 0, daysWithData = 0;
   let longest = 0, longestDate = '';
   let difficulties = [];
+  const activityTotals = {};
+  for (const t of (data.activityTypes || [])) activityTotals[t.id] = 0;
   const rows = [];
   const dayDetails = [];
   for (const k of keys) {
@@ -1908,6 +2075,10 @@ function printSummary(range) {
     totalBreak += breakMs;
     totalDist += data.days[k].distractions || 0;
     sessions += clipped.length;
+    // Activity totals
+    for (const t of (data.activityTypes || [])) {
+      activityTotals[t.id] += activityTotalMs(t.id, k);
+    }
     for (const s of clipped) {
       const dur = (s.end ? new Date(s.end) : new Date()) - new Date(s.start);
       if (dur > longest) { longest = dur; longestDate = k; }
@@ -1936,6 +2107,7 @@ function printSummary(range) {
           Wake: ${d.wakeTime || '—'} · Distractions: ${d.distractions || 0}
         </div>
         ${buildSessionRowsHtml(k)}
+        ${buildActivityDetailsHtml(k)}
         ${d.afterDaNotes && d.afterDaNotes.trim() ? `
           <div style="margin-top: 10px;">
             <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.1em; color:#888; font-family:Helvetica,Arial,sans-serif; font-weight:700; margin-bottom:4px;">After DA</div>
@@ -1976,6 +2148,20 @@ function printSummary(range) {
       <div class="card"><div class="label">Avg Difficulty</div><div class="value">${avgDifficulty}</div></div>
       <div class="card"><div class="label">Days Tracked</div><div class="value">${daysWithData} / ${keys.length}</div></div>
     </div>
+    ${(data.activityTypes && data.activityTypes.length > 0) ? `
+      <h2>Activities (totals across range)</h2>
+      <div class="grid" style="grid-template-columns:repeat(${Math.min(4, data.activityTypes.length)},1fr);">
+        ${data.activityTypes.map(type => {
+          const ms = activityTotals[type.id] || 0;
+          const avgPerDay = daysWithData ? ms / daysWithData : 0;
+          return `<div class="card">
+            <div class="label">${escapeHtml(type.name)}</div>
+            <div class="value">${formatDurationShort(ms)}</div>
+            <div style="font-size:10px; color:#666; margin-top:4px;">Avg ${formatDurationShort(avgPerDay)}/day</div>
+          </div>`;
+        }).join('')}
+      </div>
+    ` : ''}
     <h2>Daily Breakdown</h2>
     <table>
       <thead><tr><th>Date</th><th>Wake</th><th>DA</th><th>Breaks</th><th>Sessions</th><th>Distractions</th></tr></thead>
@@ -2282,6 +2468,437 @@ function deleteSystem() {
   renderSystemsList();
 }
 
+// ===== Activities =====
+let activityTimerInterval = null;
+
+function getActiveActivity() {
+  // Returns { dayKey, activityTypeId, session } or null
+  for (const k of Object.keys(data.days)) {
+    const acts = data.days[k].activities || {};
+    for (const typeId of Object.keys(acts)) {
+      const session = (acts[typeId] || []).find(s => !s.end);
+      if (session) return { dayKey: k, activityTypeId: typeId, session };
+    }
+  }
+  return null;
+}
+
+function startActivity(typeId) {
+  // Stop any active DA session
+  if (findActiveAnywhere()) {
+    stopSessionSilent();
+  }
+  // Stop any active activity
+  const activeAct = getActiveActivity();
+  if (activeAct) {
+    stopActivity(activeAct.dayKey, activeAct.activityTypeId, activeAct.session.id);
+  }
+  const day = getDay(viewingDate);
+  if (!day.activities[typeId]) day.activities[typeId] = [];
+  const id = 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  day.activities[typeId].push({ id, start: new Date().toISOString(), end: null, notes: '' });
+  saveData(data);
+  render();
+}
+
+function stopActivity(dayKey, typeId, sessionId) {
+  const day = data.days[dayKey];
+  if (!day || !day.activities[typeId]) return;
+  const session = day.activities[typeId].find(s => s.id === sessionId);
+  if (!session) return;
+
+  const startDate = new Date(session.start);
+  const now = new Date();
+  const startKey = dateKey(startDate);
+  const endKey = dateKey(now);
+
+  if (startKey !== endKey) {
+    // Split at midnight
+    const segments = [];
+    let cur = new Date(startDate);
+    while (true) {
+      const dayEndOfCur = new Date(cur);
+      dayEndOfCur.setHours(24, 0, 0, 0);
+      if (dayEndOfCur <= now) {
+        segments.push({ start: cur.toISOString(), end: dayEndOfCur.toISOString() });
+        cur = new Date(dayEndOfCur);
+      } else {
+        segments.push({ start: cur.toISOString(), end: now.toISOString() });
+        break;
+      }
+    }
+    session.end = segments[0].end;
+    for (let i = 1; i < segments.length; i++) {
+      const seg = segments[i];
+      const segDayKey = dateKey(new Date(seg.start));
+      const segDay = getDay(segDayKey);
+      if (!segDay.activities[typeId]) segDay.activities[typeId] = [];
+      const newId = 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7) + '_' + i;
+      segDay.activities[typeId].push({ id: newId, start: seg.start, end: seg.end, notes: '' });
+    }
+  } else {
+    session.end = now.toISOString();
+  }
+  saveData(data);
+  render();
+}
+
+function cancelActivity(dayKey, typeId, sessionId) {
+  if (!confirm('Cancel this activity? It will be removed.')) return;
+  const day = data.days[dayKey];
+  if (!day || !day.activities[typeId]) return;
+  day.activities[typeId] = day.activities[typeId].filter(s => s.id !== sessionId);
+  saveData(data);
+  render();
+}
+
+function collectActivitySessionsForDate(typeId, dateKeyStr) {
+  // Get sessions that touch this date, clipped
+  const result = [];
+  const day = data.days[dateKeyStr];
+  if (day && day.activities[typeId]) result.push(...day.activities[typeId]);
+  const prev = data.days[shiftKey(dateKeyStr, -1)];
+  if (prev && prev.activities && prev.activities[typeId]) {
+    for (const s of prev.activities[typeId]) {
+      const end = s.end ? new Date(s.end) : new Date();
+      const dayStart = parseKey(dateKeyStr).getTime();
+      if (end.getTime() > dayStart) result.push(s);
+    }
+  }
+  return splitSessionsAtMidnight(result, dateKeyStr);
+}
+
+function activityTotalMs(typeId, dateKeyStr) {
+  const sessions = collectActivitySessionsForDate(typeId, dateKeyStr);
+  return totalDaMs(sessions);
+}
+
+function renderActivitiesView() {
+  document.getElementById('day-view').classList.remove('active');
+  document.getElementById('history-view').classList.remove('active');
+  document.getElementById('activities-view').classList.add('active');
+
+  document.getElementById('act-date-label').textContent = formatDate(viewingDate);
+
+  // Summary line
+  const summary = document.getElementById('activities-summary');
+  summary.innerHTML = (data.activityTypes || []).map(type => {
+    const ms = activityTotalMs(type.id, viewingDate);
+    return `
+      <div style="display:flex; flex-direction:column;">
+        <span style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-family:Helvetica,Arial,sans-serif; font-weight:700;">${escapeHtml(type.name)}</span>
+        <span style="font-family:Helvetica,Arial,sans-serif; font-weight:700; font-size:18px;">${formatDurationShort(ms)}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Each activity gets its own block
+  const container = document.getElementById('activities-container');
+  if (!data.activityTypes || data.activityTypes.length === 0) {
+    container.innerHTML = '<div class="empty-state">No activities yet. Click "+ Add Activity" to create one.</div>';
+    return;
+  }
+
+  const activeAct = getActiveActivity();
+  container.innerHTML = data.activityTypes.map(type => renderActivityBlock(type, activeAct)).join('');
+
+  // Wire up buttons
+  container.querySelectorAll('[data-start-activity]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (viewingDate !== todayKey()) {
+        if (!confirm('You are viewing a past/future day. Jump to today to start?')) return;
+        viewingDate = todayKey();
+        render();
+        return;
+      }
+      startActivity(btn.getAttribute('data-start-activity'));
+    });
+  });
+  container.querySelectorAll('[data-stop-activity]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [dayKey, typeId, sessionId] = btn.getAttribute('data-stop-activity').split('|');
+      stopActivity(dayKey, typeId, sessionId);
+    });
+  });
+  container.querySelectorAll('[data-cancel-activity]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [dayKey, typeId, sessionId] = btn.getAttribute('data-cancel-activity').split('|');
+      cancelActivity(dayKey, typeId, sessionId);
+    });
+  });
+  container.querySelectorAll('[data-edit-activity-session]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const [typeId, sessionId] = btn.getAttribute('data-edit-activity-session').split('|');
+      openEditActivitySession(typeId, sessionId);
+    });
+  });
+  container.querySelectorAll('[data-add-activity-session]').forEach(btn => {
+    btn.addEventListener('click', () => addManualActivitySession(btn.getAttribute('data-add-activity-session')));
+  });
+  container.querySelectorAll('[data-delete-activity-type]').forEach(btn => {
+    btn.addEventListener('click', () => deleteActivityType(btn.getAttribute('data-delete-activity-type')));
+  });
+  container.querySelectorAll('[data-activity-goal-input]').forEach(input => {
+    input.addEventListener('change', () => {
+      const typeId = input.getAttribute('data-activity-goal-input');
+      const type = data.activityTypes.find(t => t.id === typeId);
+      if (type) {
+        const num = parseFloat(input.value);
+        type.goalHours = isNaN(num) ? 0 : num;
+        saveData(data);
+        renderActivitiesView();
+      }
+    });
+  });
+
+  // Start live timer if there's an active activity
+  if (activityTimerInterval) {
+    clearInterval(activityTimerInterval);
+    activityTimerInterval = null;
+  }
+  if (activeAct) {
+    activityTimerInterval = setInterval(() => {
+      const displayEl = document.getElementById('activity-timer-' + activeAct.activityTypeId);
+      if (displayEl) {
+        const ms = Date.now() - new Date(activeAct.session.start).getTime();
+        displayEl.textContent = formatDuration(ms);
+      }
+      // Also update the summary
+      const sumEl = document.getElementById('activities-summary');
+      if (sumEl) {
+        // lightweight update of totals
+        Array.from(sumEl.children).forEach((child, idx) => {
+          const type = data.activityTypes[idx];
+          if (!type) return;
+          const ms = activityTotalMs(type.id, viewingDate);
+          const valEl = child.querySelector('span:nth-child(2)');
+          if (valEl) valEl.textContent = formatDurationShort(ms);
+        });
+      }
+    }, 1000);
+  }
+}
+
+function renderActivityBlock(type, activeAct) {
+  const sessions = collectActivitySessionsForDate(type.id, viewingDate);
+  const totalMs = totalDaMs(sessions);
+  const goalMs = (type.goalHours || 0) * 3600000;
+  const isThisActive = activeAct && activeAct.activityTypeId === type.id && viewingDate === dateKey(new Date(activeAct.session.start));
+
+  const goalPct = goalMs > 0 ? Math.min(100, (totalMs / goalMs) * 100) : 0;
+  const overLimit = type.mode === 'limit' && goalMs > 0 && totalMs > goalMs;
+  const barColor = type.mode === 'limit' ? (overLimit ? 'var(--danger)' : type.color || 'var(--accent)') : (type.color || 'var(--accent)');
+
+  const sorted = [...sessions].sort((a, b) => new Date(a.start) - new Date(b.start));
+  let sessionsHtml = '';
+  if (sorted.length === 0) {
+    sessionsHtml = '<div class="empty-state" style="padding:8px;">No sessions yet.</div>';
+  } else {
+    sessionsHtml = sorted.map(s => {
+      const start = new Date(s.start);
+      const end = s.end ? new Date(s.end) : new Date();
+      const dur = end - start;
+      const live = !s.end;
+      const editable = !live && !s._crossedStart && !s._crossedEnd;
+      const notes = s.notes ? `<div class="session-notes">${escapeHtml(s.notes)}</div>` : '';
+      return `
+        <div class="session-item">
+          <div class="item-row">
+            <span class="session-time">${formatTimeOfDay(s.start)} – ${live ? '<em>now</em>' : formatTimeOfDay(s.end)}</span>
+            <span class="session-duration">${formatDurationShort(dur)}${live ? ' •' : ''}</span>
+            <div class="session-controls">
+              ${editable && type.allowNotes ? `<button data-edit-activity-session="${type.id}|${s.id}" title="Edit">✎</button>` : ''}
+              ${editable && !type.allowNotes ? `<button data-edit-activity-session="${type.id}|${s.id}" title="Edit times">✎</button>` : ''}
+            </div>
+          </div>
+          ${notes}
+        </div>
+      `;
+    }).join('');
+  }
+
+  return `
+    <div style="margin-bottom: 24px; border:1px solid var(--line); border-radius:8px; padding:16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="width:10px; height:10px; border-radius:50%; background:${type.color || '#888'};"></div>
+          <h3 style="margin:0; font-size:16px;">${escapeHtml(type.name)}</h3>
+          <span style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">${type.mode === 'limit' ? 'Limit' : 'Target'}</span>
+        </div>
+        <div style="display:flex; gap:6px;">
+          ${!type.isCore ? `<button data-delete-activity-type="${type.id}" style="background:none; border:1px solid var(--line); padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; color:var(--danger);">Delete</button>` : ''}
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+        <div>
+          <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; font-family:Helvetica,Arial,sans-serif; font-weight:700; margin-bottom:4px;">Today</div>
+          <div style="font-family:Helvetica,Arial,sans-serif; font-weight:700; font-size:24px;">${formatDurationShort(totalMs)}</div>
+        </div>
+        <div>
+          <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; font-family:Helvetica,Arial,sans-serif; font-weight:700; margin-bottom:4px;">${type.mode === 'limit' ? 'Limit' : 'Goal'}</div>
+          <div style="display:flex; align-items:baseline; gap:6px;">
+            <input type="number" min="0" step="0.25" value="${type.goalHours || ''}" data-activity-goal-input="${type.id}" style="width:60px; border:none; border-bottom:1px solid var(--line-strong); font-size:18px; font-family:Helvetica,Arial,sans-serif; font-weight:700; padding:2px 4px; background:transparent;">
+            <span style="font-size:13px; color:var(--muted);">hrs</span>
+          </div>
+          ${goalMs > 0 ? `
+            <div style="margin-top:6px; height:4px; background:var(--soft); border-radius:2px; overflow:hidden;">
+              <div style="height:100%; width:${goalPct}%; background:${barColor}; transition:width 0.3s;"></div>
+            </div>
+            ${overLimit ? '<div style="font-size:11px; color:var(--danger); margin-top:4px;">Over limit</div>' : ''}
+          ` : ''}
+        </div>
+      </div>
+
+      <div style="text-align:center; padding:16px; border:1px solid var(--line); border-radius:6px; margin-bottom:16px;">
+        <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); margin-bottom:6px;">${isThisActive ? 'Running' : 'Ready'}</div>
+        <div id="activity-timer-${type.id}" style="font-family:Helvetica,Arial,sans-serif; font-weight:700; font-size:36px; letter-spacing:-0.02em; margin-bottom:12px; font-variant-numeric:tabular-nums;">
+          ${isThisActive ? formatDuration(Date.now() - new Date(activeAct.session.start).getTime()) : '00:00:00'}
+        </div>
+        <div style="display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
+          ${isThisActive
+            ? `<button data-stop-activity="${activeAct.dayKey}|${type.id}|${activeAct.session.id}" style="background:var(--danger); color:white; border:none; padding:10px 24px; font-size:13px; font-family:Helvetica,Arial,sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer; border-radius:4px;">Stop</button>
+               <button data-cancel-activity="${activeAct.dayKey}|${type.id}|${activeAct.session.id}" style="background:none; color:var(--fg); border:1px solid var(--line-strong); padding:10px 20px; font-size:13px; font-family:Helvetica,Arial,sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer; border-radius:4px;">Cancel</button>`
+            : `<button data-start-activity="${type.id}" style="background:var(--fg); color:var(--bg); border:none; padding:10px 28px; font-size:13px; font-family:Helvetica,Arial,sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; cursor:pointer; border-radius:4px;">Start</button>`
+          }
+        </div>
+      </div>
+
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+        <div style="font-size:11px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-family:Helvetica,Arial,sans-serif; font-weight:700;">Sessions</div>
+        <button data-add-activity-session="${type.id}" style="background:none; border:1px solid var(--line); padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-family:Helvetica,Arial,sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">+ Add</button>
+      </div>
+      <div class="sessions">${sessionsHtml}</div>
+    </div>
+  `;
+}
+
+function addManualActivitySession(typeId) {
+  const day = getDay(viewingDate);
+  if (!day.activities[typeId]) day.activities[typeId] = [];
+  let startDate, endDate;
+  if (viewingDate === todayKey()) {
+    endDate = new Date();
+    startDate = new Date(endDate.getTime() - 30 * 60 * 1000);
+  } else {
+    startDate = parseKey(viewingDate);
+    startDate.setHours(12, 0, 0, 0);
+    endDate = new Date(startDate.getTime() + 30 * 60 * 1000);
+  }
+  const id = 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  day.activities[typeId].push({
+    id,
+    start: startDate.toISOString(),
+    end: endDate.toISOString(),
+    notes: ''
+  });
+  saveData(data);
+  render();
+  openEditActivitySession(typeId, id);
+}
+
+function openEditActivitySession(typeId, sessionId) {
+  // Find the day owning this session
+  let owningDayKey = null;
+  let session = null;
+  for (const k of Object.keys(data.days)) {
+    const acts = data.days[k].activities || {};
+    if (acts[typeId]) {
+      const s = acts[typeId].find(s => s.id === sessionId);
+      if (s) { owningDayKey = k; session = s; break; }
+    }
+  }
+  if (!session) return;
+
+  const type = data.activityTypes.find(t => t.id === typeId);
+  if (!type) return;
+
+  editingTarget = { type: 'activity', dayKey: owningDayKey, activityTypeId: typeId, id: sessionId };
+  document.getElementById('edit-modal-title').textContent = `Edit ${type.name} Session`;
+  document.getElementById('edit-time-row').style.display = 'flex';
+  document.getElementById('edit-end-row').style.display = 'flex';
+  document.getElementById('edit-difficulty-row').style.display = 'none';
+  document.getElementById('edit-notes-label').textContent = 'Notes';
+  document.getElementById('edit-notes').placeholder = type.allowNotes ? 'What did you do? Anything notable?' : '(Notes disabled for this activity)';
+  document.getElementById('edit-notes').disabled = !type.allowNotes;
+  document.getElementById('edit-start').value = isoToTimeInput(session.start);
+  document.getElementById('edit-end').value = session.end ? isoToTimeInput(session.end) : '';
+  document.getElementById('edit-notes').value = session.notes || '';
+  document.getElementById('edit-delete').style.display = 'inline-block';
+  document.getElementById('edit-modal').classList.add('show');
+  setTimeout(() => {
+    if (type.allowNotes) document.getElementById('edit-notes').focus();
+    else document.getElementById('edit-start').focus();
+  }, 50);
+}
+
+function openAddActivityModal() {
+  document.getElementById('add-activity-name').value = '';
+  document.getElementById('add-activity-mode').value = 'target';
+  document.getElementById('add-activity-goal').value = '';
+  document.getElementById('add-activity-notes').checked = true;
+  document.getElementById('add-activity-modal').classList.add('show');
+  setTimeout(() => document.getElementById('add-activity-name').focus(), 50);
+}
+
+function saveNewActivityType() {
+  const name = document.getElementById('add-activity-name').value.trim();
+  if (!name) { alert('Name required.'); return; }
+  const mode = document.getElementById('add-activity-mode').value;
+  const goalRaw = parseFloat(document.getElementById('add-activity-goal').value);
+  const allowNotes = document.getElementById('add-activity-notes').checked;
+  const id = 'act_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+  // Pick a random-ish color
+  const colors = ['#7c3aed', '#0891b2', '#db2777', '#ea580c', '#0d9488', '#65a30d'];
+  const color = colors[Math.floor(Math.random() * colors.length)];
+  data.activityTypes.push({
+    id, name, mode,
+    goalHours: isNaN(goalRaw) ? 0 : goalRaw,
+    allowNotes,
+    color
+  });
+  saveData(data);
+  document.getElementById('add-activity-modal').classList.remove('show');
+  renderActivitiesView();
+}
+
+function deleteActivityType(typeId) {
+  const type = data.activityTypes.find(t => t.id === typeId);
+  if (!type) return;
+  if (!confirm(`Delete the "${type.name}" activity type? All logged sessions for it will also be deleted.`)) return;
+  data.activityTypes = data.activityTypes.filter(t => t.id !== typeId);
+  // Remove sessions from all days
+  for (const k of Object.keys(data.days)) {
+    if (data.days[k].activities && data.days[k].activities[typeId]) {
+      delete data.days[k].activities[typeId];
+    }
+  }
+  saveData(data);
+  renderActivitiesView();
+}
+
+function renderDayActivitiesSummary(day) {
+  const el = document.getElementById('day-activities-summary');
+  if (!data.activityTypes || data.activityTypes.length === 0) {
+    el.style.display = 'none';
+    return;
+  }
+  let hasAny = false;
+  const items = data.activityTypes.map(type => {
+    const ms = activityTotalMs(type.id, viewingDate);
+    if (ms > 0) hasAny = true;
+    return `
+      <div style="display:flex; align-items:center; gap:6px;">
+        <div style="width:8px; height:8px; border-radius:50%; background:${type.color || '#888'};"></div>
+        <span style="color:var(--muted); font-size:12px;">${escapeHtml(type.name)}:</span>
+        <span style="font-family:Helvetica,Arial,sans-serif; font-weight:700;">${formatDurationShort(ms)}</span>
+      </div>
+    `;
+  }).join('');
+  el.innerHTML = items;
+  el.style.display = hasAny ? 'flex' : 'none';
+}
+
 function exportJson() {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -2337,6 +2954,28 @@ document.getElementById('history-btn').addEventListener('click', () => {
   currentView = 'history';
   render();
 });
+
+document.getElementById('activities-btn').addEventListener('click', () => {
+  currentView = 'activities';
+  render();
+});
+document.getElementById('act-back-btn').addEventListener('click', () => {
+  currentView = 'day';
+  render();
+});
+document.getElementById('act-prev-day').addEventListener('click', () => {
+  viewingDate = shiftKey(viewingDate, -1);
+  render();
+});
+document.getElementById('act-next-day').addEventListener('click', () => {
+  viewingDate = shiftKey(viewingDate, 1);
+  render();
+});
+document.getElementById('act-add-type').addEventListener('click', openAddActivityModal);
+document.getElementById('add-activity-cancel').addEventListener('click', () => {
+  document.getElementById('add-activity-modal').classList.remove('show');
+});
+document.getElementById('add-activity-save').addEventListener('click', saveNewActivityType);
 
 document.getElementById('prompts-btn').addEventListener('click', openPromptsModal);
 document.getElementById('prompts-close').addEventListener('click', closePromptsModal);

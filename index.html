@@ -960,6 +960,14 @@ function loadData() {
     if (!parsed.systems) parsed.systems = [];
     if (!parsed.activityTypes || parsed.activityTypes.length === 0) {
       parsed.activityTypes = defaultActivityTypes();
+    } else {
+      // Add any missing default types (so existing users get new defaults)
+      const existingIds = new Set(parsed.activityTypes.map(t => t.id));
+      for (const def of defaultActivityTypes()) {
+        if (!existingIds.has(def.id)) {
+          parsed.activityTypes.push(def);
+        }
+      }
     }
     return parsed;
   } catch (e) {
@@ -971,7 +979,8 @@ function defaultActivityTypes() {
   return [
     { id: 'social', name: 'Social Media', mode: 'limit', goalHours: 1, allowNotes: false, color: '#b91c1c' },
     { id: 'learning', name: 'Learning', mode: 'target', goalHours: 1, allowNotes: true, color: '#2563eb' },
-    { id: 'building', name: 'Building Apps', mode: 'target', goalHours: 2, allowNotes: true, color: '#16a34a' }
+    { id: 'building', name: 'Building Apps', mode: 'target', goalHours: 2, allowNotes: true, color: '#16a34a' },
+    { id: 'offscreen', name: 'Off-Screen', mode: 'target', goalHours: 0, allowNotes: true, color: '#7c3aed' }
   ];
 }
 

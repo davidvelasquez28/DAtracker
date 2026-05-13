@@ -816,21 +816,10 @@
 
 <div class="modal-bg" id="add-activity-modal">
   <div class="modal">
-    <h3>Add Activity Type</h3>
+    <h3>Add Activity</h3>
     <div class="modal-row">
       <label>Name</label>
       <input type="text" id="add-activity-name" placeholder="e.g. Reading, Gym, Side Project">
-    </div>
-    <div class="modal-row">
-      <label>Type</label>
-      <select id="add-activity-mode" style="border:1px solid var(--line); padding:8px; border-radius:4px; font-size:14px; font-family:inherit;">
-        <option value="target">Positive (set a target — bar fills as you progress)</option>
-        <option value="limit">Negative (set a limit — bar turns red when exceeded)</option>
-      </select>
-    </div>
-    <div class="modal-row">
-      <label>Daily goal (hours, optional)</label>
-      <input type="number" id="add-activity-goal" min="0" step="0.25" placeholder="e.g. 2">
     </div>
     <div class="modal-row">
       <label><input type="checkbox" id="add-activity-notes" checked> Allow session notes</label>
@@ -961,11 +950,24 @@ function loadData() {
     if (!parsed.activityTypes || parsed.activityTypes.length === 0) {
       parsed.activityTypes = defaultActivityTypes();
     } else {
+      // Migration: remove old default activity types that have no logged sessions
+      const oldDefaultIds = ['social', 'learning', 'building', 'offscreen'];
+      const hasSessionsForType = (typeId) => {
+        for (const k of Object.keys(parsed.days || {})) {
+          const acts = parsed.days[k].activities;
+          if (acts && acts[typeId] && acts[typeId].length > 0) return true;
+        }
+        return false;
+      };
+      parsed.activityTypes = parsed.activityTypes.filter(t => {
+        if (oldDefaultIds.includes(t.id) && !hasSessionsForType(t.id)) return false;
+        return true;
+      });
       // Add any missing default types (so existing users get new defaults)
       const existingIds = new Set(parsed.activityTypes.map(t => t.id));
       for (const def of defaultActivityTypes()) {
         if (!existingIds.has(def.id)) {
-          parsed.activityTypes.push(def);
+          parsed.activityTypes.unshift(def);
         }
       }
     }
@@ -977,10 +979,7 @@ function loadData() {
 
 function defaultActivityTypes() {
   return [
-    { id: 'social', name: 'Social Media', mode: 'limit', goalHours: 1, allowNotes: false, color: '#b91c1c' },
-    { id: 'learning', name: 'Learning', mode: 'target', goalHours: 1, allowNotes: true, color: '#2563eb' },
-    { id: 'building', name: 'Building Apps', mode: 'target', goalHours: 2, allowNotes: true, color: '#16a34a' },
-    { id: 'offscreen', name: 'Off-Screen', mode: 'target', goalHours: 0, allowNotes: true, color: '#7c3aed' }
+    { id: 'elsewhere', name: 'Elsewhere', mode: 'target', goalHours: 0, allowNotes: true, color: '#7c3aed' }
   ];
 }
 
@@ -2732,31 +2731,15 @@ function renderActivityBlock(type, activeAct) {
         <div style="display:flex; align-items:center; gap:10px;">
           <div style="width:10px; height:10px; border-radius:50%; background:${type.color || '#888'};"></div>
           <h3 style="margin:0; font-size:16px;">${escapeHtml(type.name)}</h3>
-          <span style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">${type.mode === 'limit' ? 'Limit' : 'Target'}</span>
         </div>
         <div style="display:flex; gap:6px;">
           ${!type.isCore ? `<button data-delete-activity-type="${type.id}" style="background:none; border:1px solid var(--line); padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; color:var(--danger);">Delete</button>` : ''}
         </div>
       </div>
 
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
-        <div>
-          <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; font-family:Helvetica,Arial,sans-serif; font-weight:700; margin-bottom:4px;">Today</div>
-          <div style="font-family:Helvetica,Arial,sans-serif; font-weight:700; font-size:24px;">${formatDurationShort(totalMs)}</div>
-        </div>
-        <div>
-          <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; font-family:Helvetica,Arial,sans-serif; font-weight:700; margin-bottom:4px;">${type.mode === 'limit' ? 'Limit' : 'Goal'}</div>
-          <div style="display:flex; align-items:baseline; gap:6px;">
-            <input type="number" min="0" step="0.25" value="${type.goalHours || ''}" data-activity-goal-input="${type.id}" style="width:60px; border:none; border-bottom:1px solid var(--line-strong); font-size:18px; font-family:Helvetica,Arial,sans-serif; font-weight:700; padding:2px 4px; background:transparent;">
-            <span style="font-size:13px; color:var(--muted);">hrs</span>
-          </div>
-          ${goalMs > 0 ? `
-            <div style="margin-top:6px; height:4px; background:var(--soft); border-radius:2px; overflow:hidden;">
-              <div style="height:100%; width:${goalPct}%; background:${barColor}; transition:width 0.3s;"></div>
-            </div>
-            ${overLimit ? '<div style="font-size:11px; color:var(--danger); margin-top:4px;">Over limit</div>' : ''}
-          ` : ''}
-        </div>
+      <div style="margin-bottom: 16px;">
+        <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em; font-family:Helvetica,Arial,sans-serif; font-weight:700; margin-bottom:4px;">Today</div>
+        <div style="font-family:Helvetica,Arial,sans-serif; font-weight:700; font-size:24px;">${formatDurationShort(totalMs)}</div>
       </div>
 
       <div style="text-align:center; padding:16px; border:1px solid var(--line); border-radius:6px; margin-bottom:16px;">
@@ -2853,16 +2836,14 @@ function openAddActivityModal() {
 function saveNewActivityType() {
   const name = document.getElementById('add-activity-name').value.trim();
   if (!name) { alert('Name required.'); return; }
-  const mode = document.getElementById('add-activity-mode').value;
-  const goalRaw = parseFloat(document.getElementById('add-activity-goal').value);
   const allowNotes = document.getElementById('add-activity-notes').checked;
   const id = 'act_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
-  // Pick a random-ish color
-  const colors = ['#7c3aed', '#0891b2', '#db2777', '#ea580c', '#0d9488', '#65a30d'];
+  const colors = ['#7c3aed', '#0891b2', '#db2777', '#ea580c', '#0d9488', '#65a30d', '#2563eb', '#b91c1c'];
   const color = colors[Math.floor(Math.random() * colors.length)];
   data.activityTypes.push({
-    id, name, mode,
-    goalHours: isNaN(goalRaw) ? 0 : goalRaw,
+    id, name,
+    mode: 'target',
+    goalHours: 0,
     allowNotes,
     color
   });

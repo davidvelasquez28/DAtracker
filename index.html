@@ -707,7 +707,7 @@
     <div id="day-activities-summary" style="display:none; margin-bottom:20px; padding:10px 12px; border:1px solid var(--line); border-radius:6px; font-size:13px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;"></div>
 
     <div class="section-title">Goals</div>
-    <div class="goals">
+    <div class="goals" style="grid-template-columns: 1fr; max-width: 280px;">
       <div class="goal">
         <div class="goal-label">DA Time</div>
         <div class="goal-row">
@@ -715,21 +715,6 @@
         </div>
         <div class="goal-progress" id="da-progress">—</div>
         <div class="bar"><div class="bar-fill" id="da-bar" style="width:0%"></div></div>
-      </div>
-      <div class="goal">
-        <div class="goal-label">Total Breaks</div>
-        <div class="goal-row">
-          <input type="number" id="goal-break-total" min="0" step="0.25"> <span class="goal-unit">hrs</span>
-        </div>
-        <div class="goal-progress" id="break-total-progress">—</div>
-        <div class="bar"><div class="bar-fill" id="break-total-bar" style="width:0%"></div></div>
-      </div>
-      <div class="goal">
-        <div class="goal-label">Per Break</div>
-        <div class="goal-row">
-          <input type="number" id="goal-break-per" min="0" step="1"> <span class="goal-unit">min</span>
-        </div>
-        <div class="goal-progress" id="break-per-progress">—</div>
       </div>
     </div>
 
@@ -950,20 +935,19 @@ function loadData() {
     if (!parsed.activityTypes || parsed.activityTypes.length === 0) {
       parsed.activityTypes = defaultActivityTypes();
     } else {
-      // Migration: remove old default activity types that have no logged sessions
+      // Force-remove old default activity types and their session data
       const oldDefaultIds = ['social', 'learning', 'building', 'offscreen'];
-      const hasSessionsForType = (typeId) => {
-        for (const k of Object.keys(parsed.days || {})) {
-          const acts = parsed.days[k].activities;
-          if (acts && acts[typeId] && acts[typeId].length > 0) return true;
+      parsed.activityTypes = parsed.activityTypes.filter(t => !oldDefaultIds.includes(t.id));
+      // Also wipe their session data from all days
+      for (const k of Object.keys(parsed.days || {})) {
+        const acts = parsed.days[k].activities;
+        if (acts) {
+          for (const oldId of oldDefaultIds) {
+            if (acts[oldId]) delete acts[oldId];
+          }
         }
-        return false;
-      };
-      parsed.activityTypes = parsed.activityTypes.filter(t => {
-        if (oldDefaultIds.includes(t.id) && !hasSessionsForType(t.id)) return false;
-        return true;
-      });
-      // Add any missing default types (so existing users get new defaults)
+      }
+      // Add any missing default types
       const existingIds = new Set(parsed.activityTypes.map(t => t.id));
       for (const def of defaultActivityTypes()) {
         if (!existingIds.has(def.id)) {
@@ -1200,8 +1184,6 @@ function renderDay() {
 
   document.getElementById('wake-input').value = day.wakeTime || '';
   document.getElementById('goal-da').value = day.goals.daHours || '';
-  document.getElementById('goal-break-total').value = day.goals.breakTotalHours || '';
-  document.getElementById('goal-break-per').value = day.goals.breakPerMin || '';
   document.getElementById('after-da-notes').value = day.afterDaNotes || '';
 
   const allSessions = collectAllSessionsTouchingDate(viewingDate);
@@ -1209,7 +1191,6 @@ function renderDay() {
   const breaks = computeBreaks(clipped);
 
   const daMs = totalDaMs(clipped);
-  const breakMs = totalBreakMs(breaks);
 
   const daGoalMs = (day.goals.daHours || 0) * 3600000;
   document.getElementById('da-progress').textContent =
@@ -1218,22 +1199,6 @@ function renderDay() {
   const daBar = document.getElementById('da-bar');
   daBar.style.width = daPct + '%';
   daBar.classList.remove('over');
-
-  const breakGoalMs = (day.goals.breakTotalHours || 0) * 3600000;
-  document.getElementById('break-total-progress').textContent =
-    `${formatDurationShort(breakMs)} / ${day.goals.breakTotalHours || 0}h`;
-  const breakPct = breakGoalMs > 0 ? Math.min(100, (breakMs / breakGoalMs) * 100) : 0;
-  const breakBar = document.getElementById('break-total-bar');
-  breakBar.style.width = breakPct + '%';
-  breakBar.classList.toggle('over', breakGoalMs > 0 && breakMs > breakGoalMs);
-
-  const breakPerGoalMs = (day.goals.breakPerMin || 0) * 60000;
-  const overBreaks = breakPerGoalMs > 0 ? breaks.filter(b => b.duration > breakPerGoalMs).length : 0;
-  const avgBreak = breaks.length > 0 ? breakMs / breaks.length : 0;
-  document.getElementById('break-per-progress').textContent =
-    breaks.length > 0
-      ? `Avg ${formatDurationShort(avgBreak)} · ${overBreaks} over goal`
-      : 'No breaks yet';
 
   document.getElementById('distraction-count').textContent = day.distractions || 0;
 
@@ -1349,8 +1314,6 @@ function renderSessionsList(sessions, breaks, day) {
       const next = sorted[i + 1];
       const gap = new Date(next.start) - new Date(s.end || s.start);
       if (gap > 0 && s.end) {
-        const perGoal = (day.goals.breakPerMin || 0) * 60000;
-        const over = perGoal > 0 && gap > perGoal;
         const bk = breakKey(s.id, next.id);
         const bnote = day.breakNotes[bk] || '';
         const bnoteHtml = bnote ? `<div class="session-notes">${escapeHtml(bnote)}</div>` : '';
@@ -1358,7 +1321,7 @@ function renderSessionsList(sessions, breaks, day) {
           <div class="break-item">
             <div class="item-row">
               <span>Break</span>
-              <span class="session-duration" style="${over ? 'color:var(--danger);' : ''}">${formatDurationShort(gap)}</span>
+              <span class="session-duration">${formatDurationShort(gap)}</span>
               <div class="session-controls">
                 <button data-edit-break="${bk}" title="Edit break notes">✎</button>
               </div>
@@ -2004,7 +1967,6 @@ function printSingleDay(dateKeyStr) {
       <div class="card">
         <div class="label">Total Breaks</div>
         <div class="value">${formatDurationShort(breakMs)}</div>
-        <div class="meta">Goal: ${goals.breakTotalHours || 0}h · Per: ${goals.breakPerMin || 0}m</div>
       </div>
       <div class="card">
         <div class="label">Sessions</div>
@@ -3029,8 +2991,6 @@ document.getElementById('end-day-btn').addEventListener('click', () => {
 document.getElementById('wake-input').addEventListener('change', e => updateWake(e.target.value));
 
 document.getElementById('goal-da').addEventListener('change', e => updateGoal('daHours', e.target.value));
-document.getElementById('goal-break-total').addEventListener('change', e => updateGoal('breakTotalHours', e.target.value));
-document.getElementById('goal-break-per').addEventListener('change', e => updateGoal('breakPerMin', e.target.value));
 
 document.getElementById('after-da-notes').addEventListener('input', e => updateAfterDaNotes(e.target.value));
 

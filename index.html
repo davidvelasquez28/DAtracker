@@ -738,6 +738,17 @@
       </div>
     </div>
 
+    <div class="distraction-row">
+      <div class="distraction-info">
+        <div class="distraction-count" id="social-count">0</div>
+        <div class="distraction-label">Social Media Checks</div>
+      </div>
+      <div class="distraction-controls">
+        <button id="social-minus">−</button>
+        <button class="plus" id="social-plus">+1</button>
+      </div>
+    </div>
+
     <div style="display:flex; align-items:center; justify-content:space-between; margin: 32px 0 12px;">
       <div class="section-title" style="margin:0;">Sessions</div>
       <button id="add-session-btn" style="background:none; border:1px solid var(--line); padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; font-family:Helvetica,Arial,sans-serif; font-weight:700; text-transform:uppercase; letter-spacing:0.05em;">+ Add Session</button>
@@ -1028,6 +1039,7 @@ function getDay(key) {
   if (!d.breakNotes) d.breakNotes = {};
   if (d.afterDaNotes === undefined) d.afterDaNotes = '';
   if (!d.activities) d.activities = {};
+  if (d.socialChecks === undefined) d.socialChecks = 0;
   return d;
 }
 
@@ -1201,6 +1213,7 @@ function renderDay() {
   daBar.classList.remove('over');
 
   document.getElementById('distraction-count').textContent = day.distractions || 0;
+  document.getElementById('social-count').textContent = day.socialChecks || 0;
 
   renderTimer(day);
   renderSessionsList(clipped, breaks, day);
@@ -1397,6 +1410,10 @@ function renderHistory() {
       <div class="stat-value">${stats.avgDistractions}</div>
     </div>
     <div class="stat-card">
+      <div class="stat-label">Avg Social / Day</div>
+      <div class="stat-value">${stats.avgSocialChecks}</div>
+    </div>
+    <div class="stat-card">
       <div class="stat-label">Most Productive Day</div>
       <div class="stat-value">${stats.bestDayDa}</div>
       <div class="stat-sub">${stats.bestDayDate || ''}</div>
@@ -1410,7 +1427,7 @@ function renderHistory() {
       <div>Wake</div>
       <div>DA Time</div>
       <div class="hide-mobile">Sessions</div>
-      <div class="hide-mobile">Distractions</div>
+      <div class="hide-mobile">Dist / Soc</div>
     </div>
   `;
   for (const k of sortedDesc) {
@@ -1424,7 +1441,7 @@ function renderHistory() {
         <div>${d.wakeTime || '—'}</div>
         <div>${formatDurationShort(daMs)}</div>
         <div class="hide-mobile">${clipped.length}</div>
-        <div class="hide-mobile">${d.distractions || 0}</div>
+        <div class="hide-mobile">${d.distractions || 0} / ${d.socialChecks || 0}</div>
       </div>
     `;
   }
@@ -1448,6 +1465,7 @@ function computeAggregateStats() {
   let sessionDurations = [];
   let breakDurations = [];
   let distractions = [];
+  let socialChecksArr = [];
   let difficulties = [];
   let longest = 0, longestDate = '';
   let bestDayMs = 0, bestDayKey = '';
@@ -1483,6 +1501,7 @@ function computeAggregateStats() {
     for (const b of breaks) breakDurations.push(b.duration);
 
     distractions.push(d.distractions || 0);
+    socialChecksArr.push(d.socialChecks || 0);
   }
 
   const avg = arr => arr.length === 0 ? 0 : arr.reduce((a,b) => a+b, 0) / arr.length;
@@ -1505,6 +1524,7 @@ function computeAggregateStats() {
     avgBreak: breakDurations.length ? formatDurationShort(avg(breakDurations)) : '—',
     avgDifficulty: difficulties.length ? avg(difficulties).toFixed(1) : '—',
     avgDistractions: distractions.length ? (avg(distractions)).toFixed(1) : '0',
+    avgSocialChecks: socialChecksArr.length ? (avg(socialChecksArr)).toFixed(1) : '0',
     bestDayDa: formatDurationShort(bestDayMs),
     bestDayDate: bestDayKey ? formatShortDate(bestDayKey) : ''
   };
@@ -1608,6 +1628,13 @@ function addManualSession() {
 function addDistraction(delta) {
   const day = getDay(viewingDate);
   day.distractions = Math.max(0, (day.distractions || 0) + delta);
+  saveData(data);
+  render();
+}
+
+function addSocialCheck(delta) {
+  const day = getDay(viewingDate);
+  day.socialChecks = Math.max(0, (day.socialChecks || 0) + delta);
   saveData(data);
   render();
 }
@@ -1977,6 +2004,10 @@ function printSingleDay(dateKeyStr) {
         <div class="value">${(d && d.distractions) || 0}</div>
       </div>
       <div class="card">
+        <div class="label">Social Checks</div>
+        <div class="value">${(d && d.socialChecks) || 0}</div>
+      </div>
+      <div class="card">
         <div class="label">Day Status</div>
         <div class="value">${d && d.ended ? 'Ended' : 'Open'}</div>
       </div>
@@ -2026,7 +2057,7 @@ function printSummary(range) {
     keys.push(dateKey(d));
   }
 
-  let totalDa = 0, totalBreak = 0, totalDist = 0, sessions = 0, daysWithData = 0;
+  let totalDa = 0, totalBreak = 0, totalDist = 0, totalSocial = 0, sessions = 0, daysWithData = 0;
   let longest = 0, longestDate = '';
   let difficulties = [];
   const activityTotals = {};
@@ -2044,6 +2075,7 @@ function printSummary(range) {
     totalDa += daMs;
     totalBreak += breakMs;
     totalDist += data.days[k].distractions || 0;
+    totalSocial += data.days[k].socialChecks || 0;
     sessions += clipped.length;
     // Activity totals
     for (const t of (data.activityTypes || [])) {
@@ -2060,7 +2092,8 @@ function printSummary(range) {
       da: daMs,
       breaks: breakMs,
       sessions: clipped.length,
-      distractions: data.days[k].distractions || 0
+      distractions: data.days[k].distractions || 0,
+      socialChecks: data.days[k].socialChecks || 0
     });
     dayDetails.push(k);
   }
@@ -2114,6 +2147,7 @@ function printSummary(range) {
       <div class="card"><div class="label">Total Breaks</div><div class="value">${formatDurationShort(totalBreak)}</div></div>
       <div class="card"><div class="label">Sessions</div><div class="value">${sessions}</div></div>
       <div class="card"><div class="label">Distractions</div><div class="value">${totalDist}</div></div>
+      <div class="card"><div class="label">Social Checks</div><div class="value">${totalSocial}</div></div>
       <div class="card"><div class="label">Longest Session</div><div class="value">${formatDurationShort(longest)}</div></div>
       <div class="card"><div class="label">Avg Difficulty</div><div class="value">${avgDifficulty}</div></div>
       <div class="card"><div class="label">Days Tracked</div><div class="value">${daysWithData} / ${keys.length}</div></div>
@@ -2134,7 +2168,7 @@ function printSummary(range) {
     ` : ''}
     <h2>Daily Breakdown</h2>
     <table>
-      <thead><tr><th>Date</th><th>Wake</th><th>DA</th><th>Breaks</th><th>Sessions</th><th>Distractions</th></tr></thead>
+      <thead><tr><th>Date</th><th>Wake</th><th>DA</th><th>Breaks</th><th>Sessions</th><th>Distractions</th><th>Social</th></tr></thead>
       <tbody>
         ${rows.map(r => `<tr>
           <td>${formatShortDate(r.key)}</td>
@@ -2143,6 +2177,7 @@ function printSummary(range) {
           <td>${formatDurationShort(r.breaks)}</td>
           <td>${r.sessions}</td>
           <td>${r.distractions}</td>
+          <td>${r.socialChecks}</td>
         </tr>`).join('')}
       </tbody>
     </table>
@@ -2981,6 +3016,9 @@ document.getElementById('add-session-btn').addEventListener('click', addManualSe
 
 document.getElementById('dist-plus').addEventListener('click', () => addDistraction(1));
 document.getElementById('dist-minus').addEventListener('click', () => addDistraction(-1));
+
+document.getElementById('social-plus').addEventListener('click', () => addSocialCheck(1));
+document.getElementById('social-minus').addEventListener('click', () => addSocialCheck(-1));
 
 document.getElementById('end-day-btn').addEventListener('click', () => {
   if (confirm('End the day? This stops any active session and prevents the gap until your next session from being counted as a break.')) {
